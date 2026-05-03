@@ -168,10 +168,12 @@ fn enable_ansi_colors() {}
 fn interactive_menu() -> Result<()> {
     print_banner()?;
     cave_line("[ACK] no args. Cave man menu open.")?;
-    cave_line("1. Install lab copy and launch")?;
-    cave_line("2. Install lab copy only")?;
-    cave_line("3. Install lab copy, launch with DevTools")?;
-    cave_line("4. Restore lab copy from newest backup")?;
+    cave_line("[INFO] Claude will be copied to a patched app folder.")?;
+    cave_line("[INFO] Original Claude install remains untouched.")?;
+    cave_line("1. Patch Claude and launch")?;
+    cave_line("2. Patch Claude only")?;
+    cave_line("3. Patch Claude and launch with DevTools")?;
+    cave_line("4. Restore patched Claude from newest backup")?;
     cave_line("5. Exit")?;
     cave_prompt("Pick number: ")?;
 
