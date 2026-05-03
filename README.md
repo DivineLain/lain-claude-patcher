@@ -32,7 +32,7 @@ Wired exist. Real exist. Layer between thin. Anonymous network identity stay ano
 
 ## What Tool Do
 
-1. Tool find Store Claude install. Walk `C:\Program Files\WindowsApps`. Pick newest `Claude_*_x64__*` folder with `Claude.exe` and `resources/app.asar`.
+1. Tool find Claude install. Walk Store `C:\Program Files\WindowsApps\Claude_*_x64__*\app` and local `%LocalAppData%\AnthropicClaude\app-*`. Pick highest version folder with `Claude.exe` and `resources/app.asar`.
 2. Tool copy app folder to `%LocalAppData%\LainClaude\app`. Real install untouched. Cave man like clean room.
 3. Tool kill running Claude. Electron hold file lock. Cave man no fight lock, cave man just close door.
 4. Tool back up `app.asar` and `Claude.exe` to `lain-backups\<timestamp>\`. Cave man no smash without backup. Cave man learn from time before.
@@ -46,7 +46,7 @@ Cave man swap IIFE with `--iife <path>` flag. Any JavaScript that want to run in
 
 ## Use
 
-Find Store Claude, copy to lab folder, patch, launch:
+Find Claude, copy to lab folder, patch, launch:
 
 ```powershell
 .\lain-claude-patcher.exe install --launch

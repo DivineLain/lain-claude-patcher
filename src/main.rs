@@ -221,7 +221,7 @@ fn install_inner(args: InstallArgs, show_banner: bool) -> Result<()> {
     }
     let source = match args.source {
         Some(path) => path.canonicalize().context("source folder not found")?,
-        None => find_store_claude().context("failed to auto-detect Claude install")?,
+        None => find_claude_install().context("failed to auto-detect Claude install")?,
     };
     let target = if args.in_place {
         if args.out.is_some() {
@@ -348,34 +348,104 @@ fn validate_claude_app(dir: &Path) -> Result<()> {
 }
 
 /*
- * CAVEMAN FIND STORE CLAUDE.
+ * CAVEMAN FIND CLAUDE.
  *
- * WindowsApps has versioned Claude folders.
- * Cave man choose newest x64 folder with exe and ASAR.
+ * Store Claude lives under WindowsApps.
+ * Squirrel Claude lives under LocalAppData\AnthropicClaude\app-*.
+ * Cave man collect both. Highest version wins.
  */
-fn find_store_claude() -> Result<PathBuf> {
-    let program_files = env::var_os("ProgramFiles").context("ProgramFiles is not set")?;
-    let windows_apps = PathBuf::from(program_files).join("WindowsApps");
+#[derive(Debug)]
+struct ClaudeCandidate {
+    version: Vec<u64>,
+    modified: Option<std::time::SystemTime>,
+    path: PathBuf,
+}
+
+fn find_claude_install() -> Result<PathBuf> {
     let mut candidates = Vec::new();
-    for entry in fs::read_dir(&windows_apps)
-        .with_context(|| format!("failed to read {}", windows_apps.display()))?
-    {
-        let entry = entry?;
+    collect_store_claude_candidates(&mut candidates);
+    collect_local_claude_candidates(&mut candidates);
+
+    candidates.sort_by(|a, b| {
+        a.version
+            .cmp(&b.version)
+            .then_with(|| a.modified.cmp(&b.modified))
+            .then_with(|| a.path.cmp(&b.path))
+    });
+    candidates
+        .pop()
+        .map(|candidate| candidate.path)
+        .context("no Claude install found in Store or LocalAppData")
+}
+
+fn collect_store_claude_candidates(candidates: &mut Vec<ClaudeCandidate>) {
+    let Some(program_files) = env::var_os("ProgramFiles") else {
+        return;
+    };
+    let windows_apps = PathBuf::from(program_files).join("WindowsApps");
+    let Ok(entries) = fs::read_dir(&windows_apps) else {
+        return;
+    };
+
+    for entry in entries.flatten() {
         let name = entry.file_name().to_string_lossy().to_string();
         if !(name.starts_with("Claude_") && name.contains("_x64__")) {
             continue;
         }
         let app = entry.path().join("app");
         if app.join("Claude.exe").is_file() && app.join("resources").join("app.asar").is_file() {
-            let modified = entry.metadata()?.modified().ok();
-            candidates.push((modified, app));
+            candidates.push(ClaudeCandidate {
+                version: parse_store_claude_version(&name),
+                modified: entry.metadata().and_then(|metadata| metadata.modified()).ok(),
+                path: app,
+            });
         }
     }
-    candidates.sort_by_key(|(modified, _)| *modified);
-    candidates
-        .pop()
-        .map(|(_, path)| path)
-        .context("no Store Claude install found")
+}
+
+fn collect_local_claude_candidates(candidates: &mut Vec<ClaudeCandidate>) {
+    let Some(local) = env::var_os("LOCALAPPDATA") else {
+        return;
+    };
+    let root = PathBuf::from(local).join("AnthropicClaude");
+    let Ok(entries) = fs::read_dir(&root) else {
+        return;
+    };
+
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().to_string();
+        if !name.starts_with("app-") {
+            continue;
+        }
+        let app = entry.path();
+        if app.join("Claude.exe").is_file() && app.join("resources").join("app.asar").is_file() {
+            candidates.push(ClaudeCandidate {
+                version: parse_local_claude_version(&name),
+                modified: entry.metadata().and_then(|metadata| metadata.modified()).ok(),
+                path: app,
+            });
+        }
+    }
+}
+
+fn parse_store_claude_version(name: &str) -> Vec<u64> {
+    name.strip_prefix("Claude_")
+        .and_then(|rest| rest.split('_').next())
+        .map(parse_version_numbers)
+        .unwrap_or_default()
+}
+
+fn parse_local_claude_version(name: &str) -> Vec<u64> {
+    name.strip_prefix("app-")
+        .map(parse_version_numbers)
+        .unwrap_or_default()
+}
+
+fn parse_version_numbers(text: &str) -> Vec<u64> {
+    text.split(|ch: char| !ch.is_ascii_digit())
+        .filter(|part| !part.is_empty())
+        .filter_map(|part| part.parse().ok())
+        .collect()
 }
 
 /*
