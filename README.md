@@ -18,7 +18,7 @@
 
 ## Demo
 
-<video src="assets/demo.mp4" controls></video>
+<video src="assets/demo.webm" controls></video>
 
 ## What This
 
