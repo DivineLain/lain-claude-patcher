@@ -1,0 +1,25 @@
+target/
+*.pdb
+*.exe
+*.asar
+*.asar.tmp
+*.asar.unpacked/
+lain-backups/
+.DS_Store
+
+# local labs / copied apps / scratch
+Claude*/
+rust-test/
+virgin/
+app_asar_work/
+lab-user-data/
+.tools/
+.npm-cache/
+node_modules/
+package.json
+package-lock.json
+
+# editor / OS noise
+.idea/
+.vscode/
+Thumbs.db
