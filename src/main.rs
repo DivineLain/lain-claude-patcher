@@ -41,8 +41,9 @@ use std::{
     fs::{self, File},
     io::{self, Write},
     path::{Path, PathBuf},
-    process::Command,
-    time::{SystemTime, UNIX_EPOCH},
+    process::{Command, Stdio},
+    thread,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use walkdir::WalkDir;
@@ -184,7 +185,7 @@ fn interactive_menu() -> Result<()> {
         .read_line(&mut choice)
         .context("failed to read menu choice")?;
 
-    match choice.trim() {
+    let result = match choice.trim() {
         "1" => install_inner(default_install_args(true, false), false),
         "2" => install_inner(default_install_args(false, false), false),
         "3" => install_inner(default_install_args(true, true), false),
@@ -198,7 +199,20 @@ fn interactive_menu() -> Result<()> {
             cave_line("[OK] exit")?;
             Ok(())
         }
+    };
+
+    if let Err(err) = &result {
+        cave_line(&format!("[ERR] {err:#}"))?;
     }
+    goodbye_before_exit()?;
+    result
+}
+
+fn goodbye_before_exit() -> Result<()> {
+    cave_line("[OK] done. Use CRAUDE_FIXED on desktop to open patched Claude.")?;
+    cave_line("[OK] cave man sleep 3 seconds, then die.")?;
+    thread::sleep(Duration::from_secs(3));
+    Ok(())
 }
 
 fn default_install_args(launch: bool, enable_console: bool) -> InstallArgs {
@@ -296,15 +310,38 @@ fn install_inner(args: InstallArgs, show_banner: bool) -> Result<()> {
 
     if args.launch {
         cave_line("[ACK] launching patched Claude")?;
-        let mut command = Command::new(&lab_exe);
-        if args.enable_console {
-            command.env("CLAUDE_DEV_TOOLS", "detach");
-        }
-        command.spawn().context("failed to launch patched Claude")?;
+        launch_patched_claude(&lab_exe, args.enable_console)?;
     }
 
     Ok(())
 }
+
+fn launch_patched_claude(exe: &Path, enable_console: bool) -> Result<()> {
+    let mut command = Command::new(exe);
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    if enable_console {
+        command.env("CLAUDE_DEV_TOOLS", "detach");
+    }
+    detach_child_process(&mut command);
+    command.spawn().context("failed to launch patched Claude")?;
+    Ok(())
+}
+
+#[cfg(windows)]
+fn detach_child_process(command: &mut Command) {
+    use std::os::windows::process::CommandExt;
+
+    const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+    const DETACHED_PROCESS: u32 = 0x0000_0008;
+
+    command.creation_flags(CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS);
+}
+
+#[cfg(not(windows))]
+fn detach_child_process(_command: &mut Command) {}
 
 #[cfg(windows)]
 fn create_desktop_shortcut(target: &Path, app_dir: &Path) -> Result<PathBuf> {
