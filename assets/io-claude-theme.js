@@ -82,6 +82,7 @@
         text: STATE.text,
         font: STATE.font,
         sizes: STATE.sizes,
+        leading: STATE.leading,
         codePreset: STATE.codePreset,
         mode: STATE.mode,
         live: STATE.live
@@ -98,6 +99,7 @@
       if (last.text)       STATE.text = last.text;
       if (last.font)       { STATE.font = last.font; STATE.fontPending = last.font; }
       if (last.sizes)      STATE.sizes = { ...DEFAULT_SIZES, ...last.sizes };
+      if (last.leading)    STATE.leading = { ...DEFAULT_LEADING, ...last.leading };
       if (last.codePreset) STATE.codePreset = last.codePreset;
       if (last.mode)       STATE.mode = last.mode;
       if (typeof last.live === "boolean") STATE.live = last.live;
@@ -115,15 +117,23 @@
   // Cave man already burned by this. Lesson stuck.
   // ============================================================
   const DEFAULT_SIZES = { caption: 10, footnote: 12, code: 12, body: 13, heading: 14, prompt: 16, title: 20 };
+  // Per-tier line-height multipliers. Code/body default to generous values
+  // because Anthropic's stock leading is too tight on multi-line responses.
+  // Sliders let the user dial 1.0–2.5. Computed leading = round(size × ratio)px.
+  const DEFAULT_LEADING = { caption: 1.20, footnote: 1.17, code: 1.60, body: 1.50, heading: 1.29, prompt: 1.31, title: 1.20 };
 
   const STATE = {
     name: "lain-claude",
     accent: "#ff4da6",
     bg: "#0a0a14",
     text: "#e6e6ff",
-    font: "Space Mono",
-    fontPending: "Space Mono",
+    // Font family is OPT-IN. Empty string = no override; Claude's stock stack
+    // wins. User types a family + APPLY FONT to override. Once applied it
+    // persists via persistLast and survives reloads.
+    font: "",
+    fontPending: "",
     sizes: { ...DEFAULT_SIZES },
+    leading: { ...DEFAULT_LEADING },
     codePreset: "LAIN",
     mode: "DARK",
     live: true,
@@ -341,12 +351,33 @@
   // ============================================================
   function buildCss() {
     const t = STATE;
-    const f = JSON.stringify(t.font);
+    // Font family is opt-in. If user hasn't picked one, emit zero font-family
+    // overrides so Claude's stock stack wins. Sizes/leading still apply.
+    const hasFont = !!(t.font && t.font.trim());
+    const f = hasFont ? JSON.stringify(t.font) : "";
+    const fontFamilyVars = hasFont ? `
+  --font-anthropic-sans: ${f} !important;
+  --font-anthropic-serif: ${f} !important;
+  --font-anthropic-mono: ${f} !important;
+  --font-open-dyslexic: ${f} !important;
+  --font-mono: ${f} !important;
+  --font-ui: ${f} !important;
+  --font-ui-serif: ${f} !important;
+  --font-claude-response: ${f} !important;
+  --font-user-message: ${f} !important;
+  --font-sans-serif: ${f} !important;
+  --font-serif: ${f} !important;
+  --font-system: ${f} !important;
+  --font-dyslexia: ${f} !important;` : "";
+    const familyVars = hasFont ? `
+  --family-ui: ${f} !important;
+  --family-monospace: ${f} !important;` : "";
+    const hljsFontLine = hasFont ? `font-family: ${f} !important;` : "";
     const sz = (k) => t.sizes[k] + "px";
     // Per-tier leading multipliers from lain originals so defaults reproduce
     // exactly. Code/body get most breathing (1.38-1.42); titles stay tight (1.20).
-    const LH_RATIO = { caption: 1.20, footnote: 1.17, code: 1.42, body: 1.38, heading: 1.29, prompt: 1.31, title: 1.20 };
-    const lh = (k) => Math.round(t.sizes[k] * LH_RATIO[k]) + "px";
+    // Leading driven by STATE.leading (user-adjustable per tier via sliders).
+    const lh = (k) => Math.round(t.sizes[k] * (t.leading[k] || DEFAULT_LEADING[k])) + "px";
 
     const accentBright = lighten(t.accent, 8);
     const accentDim    = darken(t.accent, 10);
@@ -387,21 +418,12 @@
 :root,
 [data-theme="claude"],
 [data-theme="claude"][data-mode="dark"],
+[data-color-version="v2"][data-theme="claude"],
+[data-color-version="v2"][data-theme="claude"][data-mode="dark"],
 [data-theme="console"],
-[data-theme="console"][data-mode="dark"] {
-  --font-anthropic-sans: ${f} !important;
-  --font-anthropic-serif: ${f} !important;
-  --font-anthropic-mono: ${f} !important;
-  --font-open-dyslexic: ${f} !important;
-  --font-mono: ${f} !important;
-  --font-ui: ${f} !important;
-  --font-ui-serif: ${f} !important;
-  --font-claude-response: ${f} !important;
-  --font-user-message: ${f} !important;
-  --font-sans-serif: ${f} !important;
-  --font-serif: ${f} !important;
-  --font-system: ${f} !important;
-  --font-dyslexia: ${f} !important;
+[data-theme="console"][data-mode="dark"],
+[data-color-version="v2"][data-theme="console"],
+[data-color-version="v2"][data-theme="console"][data-mode="dark"] {${fontFamilyVars}
 
   --accent-brand: ${hslTriple(t.accent)} !important;
   --accent-000: ${hslTriple(t.accent)} !important;
@@ -504,9 +526,7 @@
 }
 
 .epitaxy-root,
-[data-mode="dark"] .epitaxy-root {
-  --family-ui: ${f} !important;
-  --family-monospace: ${f} !important;
+[data-mode="dark"] .epitaxy-root {${familyVars}
 
   --text-caption: ${sz('caption')} !important;
   --text-footnote: ${sz('footnote')} !important;
@@ -656,7 +676,7 @@ code,
 .hljs, pre code.hljs, code.hljs {
   background: ${bg2} !important;
   color: ${tx0} !important;
-  font-family: ${f} !important;
+  ${hljsFontLine}
 }
 .hljs-comment, .hljs-quote { color: ${code.comment} !important; font-style: italic !important; }
 .hljs-keyword, .hljs-doctag, .hljs-formula { color: ${code.keyword} !important; }
@@ -664,7 +684,12 @@ code,
 .hljs-number, .hljs-literal, .hljs-type, .hljs-variable, .hljs-template-variable { color: ${code.type} !important; }
 .hljs-title, .hljs-symbol, .hljs-bullet, .hljs-link, .hljs-meta, .hljs-selector-id { color: ${tx3} !important; }
 .hljs-name, .hljs-section, .hljs-selector-tag, .hljs-deletion, .hljs-subst { color: ${code.name} !important; }
-.hljs-built_in, .hljs-class .hljs-title, .hljs-title.class_ { color: ${code.builtin} !important; }`;
+.hljs-built_in, .hljs-class .hljs-title, .hljs-title.class_ { color: ${code.builtin} !important; }
+
+.font-claude-response-body {
+  font-size: ${sz('body')} !important;
+  line-height: ${lh('body')} !important;
+}`;
   }
 
   // ============================================================
@@ -677,16 +702,9 @@ code,
   // ============================================================
   function buildCssFontOnly() {
     const t = STATE;
-    const f = JSON.stringify(t.font);
-    const sz = (k) => t.sizes[k] + "px";
-    const LH_RATIO = { caption: 1.20, footnote: 1.17, code: 1.42, body: 1.38, heading: 1.29, prompt: 1.31, title: 1.20 };
-    const lh = (k) => Math.round(t.sizes[k] * LH_RATIO[k]) + "px";
-
-    return `:root,
-[data-theme="claude"],
-[data-theme="claude"][data-mode="dark"],
-[data-theme="console"],
-[data-theme="console"][data-mode="dark"] {
+    const hasFont = !!(t.font && t.font.trim());
+    const f = hasFont ? JSON.stringify(t.font) : "";
+    const fontFamilyVars = hasFont ? `
   --font-anthropic-sans: ${f} !important;
   --font-anthropic-serif: ${f} !important;
   --font-anthropic-mono: ${f} !important;
@@ -699,7 +717,24 @@ code,
   --font-sans-serif: ${f} !important;
   --font-serif: ${f} !important;
   --font-system: ${f} !important;
-  --font-dyslexia: ${f} !important;
+  --font-dyslexia: ${f} !important;` : "";
+    const familyVars = hasFont ? `
+  --family-ui: ${f} !important;
+  --family-monospace: ${f} !important;` : "";
+    const hljsFontLine = hasFont ? `font-family: ${f} !important;` : "";
+    const sz = (k) => t.sizes[k] + "px";
+    // Leading driven by STATE.leading (user-adjustable per tier via sliders).
+    const lh = (k) => Math.round(t.sizes[k] * (t.leading[k] || DEFAULT_LEADING[k])) + "px";
+
+    return `:root,
+[data-theme="claude"],
+[data-theme="claude"][data-mode="dark"],
+[data-color-version="v2"][data-theme="claude"],
+[data-color-version="v2"][data-theme="claude"][data-mode="dark"],
+[data-theme="console"],
+[data-theme="console"][data-mode="dark"],
+[data-color-version="v2"][data-theme="console"],
+[data-color-version="v2"][data-theme="console"][data-mode="dark"] {${fontFamilyVars}
 }
 
 .dframe-root,
@@ -708,9 +743,7 @@ code,
 }
 
 .epitaxy-root,
-[data-mode="dark"] .epitaxy-root {
-  --family-ui: ${f} !important;
-  --family-monospace: ${f} !important;
+[data-mode="dark"] .epitaxy-root {${familyVars}
 
   --text-caption: ${sz('caption')} !important;
   --text-footnote: ${sz('footnote')} !important;
@@ -730,7 +763,12 @@ code,
 }
 
 .hljs, pre code.hljs, code.hljs {
-  font-family: ${f} !important;
+  ${hljsFontLine}
+}
+
+.font-claude-response-body {
+  font-size: ${sz('body')} !important;
+  line-height: ${lh('body')} !important;
 }`;
   }
 
@@ -1125,15 +1163,19 @@ code,
       <div class="section-h">Font Family<span class="right"><b>15</b> aliases</span></div>
       <div class="section-body">
         <div class="font-row">
-          <input type="text" class="font-input" id="fontInput" placeholder="font name (any installed)" value="Space Mono">
+          <input type="text" class="font-input" id="fontInput" placeholder="font name (any installed)" value="">
           <button class="btn primary" id="applyFontBtn">APPLY FONT</button>
         </div>
-        <div class="applied-tag" id="appliedTag">applied: Space Mono</div>
+        <div class="applied-tag" id="appliedTag">applied: (claude default)</div>
       </div>
     </div>
     <div class="section">
       <div class="section-h">Sizes<span class="right"><b>7</b> tiers</span></div>
       <div class="section-body" id="sizeRows"></div>
+    </div>
+    <div class="section">
+      <div class="section-h">Line Height<span class="right"><b>7</b> tiers</span></div>
+      <div class="section-body" id="leadingRows"></div>
     </div>
   </div>
 
@@ -1237,7 +1279,10 @@ code,
   })();
 
   $("collapseBtn").addEventListener("click", () => $("panel").classList.toggle("collapsed"));
-  $("closeBtn").addEventListener("click", () => { clearLive(); host.remove(); });
+  // Close hides instead of destroying. The segmented-pill (LAIN button) is the
+  // only way back in, so killing the host would orphan the user. Live theme
+  // stays applied; the panel just goes invisible.
+  $("closeBtn").addEventListener("click", () => { host.style.display = "none"; });
 
   // ============================================================
   // TABS
@@ -1391,6 +1436,31 @@ code,
       });
     });
   }
+  // Line-height sliders. Same 7 tiers as sizes; range 1.00–2.50 step 0.05.
+  // Computed leading (px) = round(size × ratio). Cheap mutation pattern:
+  // skip render() to avoid full repaint, push through applyLive() if LIVE on.
+  function renderLeadingRows() {
+    const order = ["caption", "footnote", "code", "body", "heading", "prompt", "title"];
+    $("leadingRows").innerHTML = order.map(k => {
+      const v = STATE.leading[k].toFixed(2);
+      return `<div class="size-row" data-leading="${k}">
+        <span class="lbl">${k}</span>
+        <input type="range" class="slider" min="1.00" max="2.50" step="0.05" value="${v}">
+        <span class="val">${v}×</span>
+      </div>`;
+    }).join("");
+    root.querySelectorAll("[data-leading]").forEach(row => {
+      const k = row.dataset.leading;
+      const slider = row.querySelector("input");
+      const val = row.querySelector(".val");
+      slider.addEventListener("input", () => {
+        STATE.leading[k] = parseFloat(slider.value);
+        val.textContent = STATE.leading[k].toFixed(2) + "×";
+        persistLast();
+        if (STATE.live) applyLive();
+      });
+    });
+  }
   // Repaint the creator panel itself from current STATE so it matches
   // whatever theme is active. Sets --io-* vars directly on .panel.
   function renderPanelTheme() {
@@ -1429,7 +1499,7 @@ code,
     $("byteSize").textContent = (iife.length / 1024).toFixed(1) + " KB";
   }
   function renderFontTag() {
-    $("appliedTag").textContent = "applied: " + STATE.font;
+    $("appliedTag").textContent = "applied: " + (STATE.font && STATE.font.trim() ? STATE.font : "(claude default)");
   }
   function render() {
     renderSwatches();
@@ -1455,6 +1525,10 @@ code,
     if (t.sizes) {
       STATE.sizes = { ...DEFAULT_SIZES, ...t.sizes };
       renderSizeRows();
+    }
+    if (t.leading) {
+      STATE.leading = { ...DEFAULT_LEADING, ...t.leading };
+      renderLeadingRows();
     }
     $("nameInput").value = t.name;
     render();
@@ -1504,11 +1578,13 @@ code,
 
   $("resetSizesBtn").addEventListener("click", () => {
     STATE.sizes = { ...DEFAULT_SIZES };
+    STATE.leading = { ...DEFAULT_LEADING };
     renderSizeRows();
+    renderLeadingRows();
     renderStats();
     persistLast();
     if (STATE.live) applyLive();
-    toast("sizes reset");
+    toast("sizes + leading reset");
   });
 
   $("deleteBtn").addEventListener("click", () => {
@@ -1559,7 +1635,8 @@ code,
       text: STATE.text,
       code: STATE.codePreset,
       font: STATE.font,
-      sizes: { ...STATE.sizes }
+      sizes: { ...STATE.sizes },
+      leading: { ...STATE.leading }
     };
     const idx = list.findIndex(t => t.name === current.name);
     if (idx >= 0) { list[idx] = current; toast("updated: " + current.name); }
@@ -1577,11 +1654,13 @@ code,
     STATE.text = lain.text;
     STATE.codePreset = lain.code;
     STATE.sizes = { ...DEFAULT_SIZES };
-    STATE.font = "Space Mono";
-    STATE.fontPending = "Space Mono";
+    STATE.leading = { ...DEFAULT_LEADING };
+    STATE.font = "";
+    STATE.fontPending = "";
     $("nameInput").value = lain.name;
-    $("fontInput").value = "Space Mono";
+    $("fontInput").value = "";
     renderSizeRows();
+    renderLeadingRows();
     render();
     toast("restored defaults");
   });
@@ -1668,8 +1747,133 @@ code,
     $("liveToggle").classList.toggle("on", STATE.live);
   }
   renderSizeRows();
+  renderLeadingRows();
   render();
   if (restored) toast("restored last session");
 
   console.log("io-claude-creator panel injected. tabs: creator/themes/font. drag header.");
+
+  // ============================================================
+  // SEGMENTED-PILL INJECTION (panel re-opener)
+  //
+  // Anthropic ships a Chat / Cowork / Code segmented control at .df-pills.
+  // We graft a 4th pill ("LAIN") onto it. Click toggles host visibility, so
+  // a closed panel can be revived without re-running the IIFE.
+  //
+  // Two-stage discovery: short polling burst (10 tries, 400ms apart) covers
+  // the case where the segmented group hasn't mounted yet at IIFE time. Then
+  // a permanent MutationObserver watches for React re-mounts (route change
+  // wipes the children), and re-grafts the pill whenever it disappears.
+  //
+  // After grafting we fire a window 'resize' event so any layout listeners
+  // (the indicator's translateX is React-state-driven, but a resize nudge
+  // is cheap insurance) recompute against the new child count.
+  // ============================================================
+  const PILL_MARK = "data-lain-pill";
+
+  // Toggle. Pill click flips visibility. Host element is preserved (state,
+  // drag position, scroll, current tab all stick) — only display flips.
+  // If something has nuked host from DOM, re-attach first.
+  function isPanelVisible() {
+    return document.body.contains(host) && host.style.display !== "none";
+  }
+  function togglePanel() {
+    if (!document.body.contains(host)) document.body.appendChild(host);
+    host.style.display = (host.style.display === "none") ? "" : "none";
+    syncPillState();
+  }
+
+  // Sync the LAIN pill's active styling to whether the panel is showing.
+  // Mirrors the markup Anthropic uses for the active route pill.
+  function syncPillState() {
+    const pill = document.querySelector(`[${PILL_MARK}]`);
+    if (!pill) return;
+    const active = isPanelVisible();
+    if (active) {
+      pill.setAttribute("data-active", "true");
+      pill.setAttribute("aria-current", "page");
+      pill.setAttribute("data-state", "open");
+      const g = pill.querySelector("span[aria-hidden='true']");
+      if (g) g.style.fontWeight = "700";
+    } else {
+      pill.removeAttribute("data-active");
+      pill.removeAttribute("aria-current");
+      pill.setAttribute("data-state", "closed");
+      const g = pill.querySelector("span[aria-hidden='true']");
+      if (g) g.style.fontWeight = "600";
+    }
+  }
+
+  // Recompute the sliding indicator from the currently-active pill geometry.
+  // React owns this transform; adding our pill shifts flex layout so the
+  // stale value mis-aligns. We just read the active pill's offsetLeft +
+  // offsetWidth and write directly. Cheap, deterministic, no route change.
+  function reflowIndicator(pills) {
+    if (!pills) return;
+    const indicator = pills.querySelector(".df-pill-indicator");
+    const active = pills.querySelector(`.df-pill[data-active="true"]:not([${PILL_MARK}])`);
+    if (!indicator || !active) return;
+    indicator.style.transform = `translateX(${active.offsetLeft}px)`;
+    indicator.style.width = active.offsetWidth + "px";
+    indicator.style.visibility = "visible";
+  }
+
+  function injectPill(pills) {
+    if (!pills || pills.querySelector(`[${PILL_MARK}]`)) return false;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "df-pill hide-focus-ring";
+    btn.setAttribute("aria-label", "Lain");
+    btn.setAttribute("data-state", "closed");
+    btn.setAttribute(PILL_MARK, "1");
+    btn.title = "Lain theme panel";
+
+    const glyph = document.createElement("span");
+    glyph.setAttribute("aria-hidden", "true");
+    glyph.style.cssText = "line-height:1;width:1em;height:1em;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;user-select:none;font-size:16px;font-weight:600;";
+    glyph.textContent = "◆"; // ◆
+
+    const lbl = document.createElement("span");
+    lbl.className = "df-pill-label";
+    lbl.textContent = "Lain";
+
+    btn.append(glyph, lbl);
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      togglePanel();
+    });
+
+    pills.appendChild(btn);
+    syncPillState();
+    // Two-frame reflow — first frame for layout to settle after appendChild,
+    // second to read post-layout geometry and rewrite indicator transform.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        reflowIndicator(pills);
+        try { window.dispatchEvent(new Event("resize")); } catch (e) {}
+      });
+    });
+    return true;
+  }
+
+  function findAndInject() {
+    const pills = document.querySelector('.df-pills[role="group"]');
+    if (!pills) return false;
+    const grafted = injectPill(pills);
+    // Even if pill already present, keep indicator honest after re-mounts /
+    // route swaps — the active pill might have changed.
+    reflowIndicator(pills);
+    return grafted;
+  }
+
+  // Initial polling burst — 10 tries @ 400ms = 4s window.
+  let pillTries = 0;
+  const pillPoll = setInterval(() => {
+    if (findAndInject() || ++pillTries >= 10) clearInterval(pillPoll);
+  }, 400);
+
+  // Permanent re-graft on React re-mount. Cheap query selector per mutation.
+  const pillObs = new MutationObserver(() => { findAndInject(); });
+  pillObs.observe(document.body, { childList: true, subtree: true });
 })();
