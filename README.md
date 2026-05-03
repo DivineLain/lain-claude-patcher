@@ -16,6 +16,10 @@
            "Present day, present time."
 ```
 
+## Demo
+
+<video src="assets/demo.mp4" controls></video>
+
 ## What This
 
 Cave man tired. Cave man eye hurt. Claude Desktop font tiny. Claude Desktop color boring. 4K monitor make tiny font tinier. 2K monitor make tiny font tiny. Cave man cousin who actually need accessibility -- fucked.
