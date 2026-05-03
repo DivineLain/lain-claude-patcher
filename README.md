@@ -18,7 +18,7 @@
 
 ## Demo
 
-<video src="assets/demo.webm" controls></video>
+![Demo](assets/demo.webp)
 
 ## What This
 
