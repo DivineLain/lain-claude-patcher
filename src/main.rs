@@ -118,6 +118,7 @@ struct RestoreArgs {
  * Command exists? Cave man dispatch.
  */
 fn main() -> Result<()> {
+    enable_ansi_colors();
     let cli = Cli::parse();
     match cli.command {
         Some(CommandArgs::Install(args)) => install(args),
@@ -125,6 +126,34 @@ fn main() -> Result<()> {
         None => interactive_menu(),
     }
 }
+
+#[cfg(windows)]
+fn enable_ansi_colors() {
+    use windows_sys::Win32::{
+        Foundation::INVALID_HANDLE_VALUE,
+        System::Console::{
+            GetConsoleMode, GetStdHandle, SetConsoleMode, ENABLE_VIRTUAL_TERMINAL_PROCESSING,
+            STD_OUTPUT_HANDLE,
+        },
+    };
+
+    unsafe {
+        let handle = GetStdHandle(STD_OUTPUT_HANDLE);
+        if handle == INVALID_HANDLE_VALUE || handle.is_null() {
+            return;
+        }
+
+        let mut mode = 0;
+        if GetConsoleMode(handle, &mut mode) == 0 {
+            return;
+        }
+
+        let _ = SetConsoleMode(handle, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    }
+}
+
+#[cfg(not(windows))]
+fn enable_ansi_colors() {}
 
 /*
  * CAVEMAN MENU.
