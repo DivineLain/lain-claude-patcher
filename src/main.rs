@@ -79,7 +79,7 @@ enum CommandArgs {
 struct InstallArgs {
     #[arg(
         long,
-        help = "Source Claude app folder containing Claude.exe and resources/app.asar. If omitted, searches the Store install."
+        help = "Source Claude app folder containing Claude.exe and resources/app.asar. If omitted, searches known install layouts."
     )]
     source: Option<PathBuf>,
 
@@ -100,6 +100,9 @@ struct InstallArgs {
 
     #[arg(long, help = "Launch with CLAUDE_DEV_TOOLS=detach.")]
     enable_console: bool,
+
+    #[arg(long, help = "Do not create or update the desktop shortcut.")]
+    no_shortcut: bool,
 }
 
 #[derive(Parser, Debug)]
@@ -202,6 +205,7 @@ fn default_install_args(launch: bool, enable_console: bool) -> InstallArgs {
         in_place: false,
         launch,
         enable_console,
+        no_shortcut: false,
     }
 }
 
@@ -279,6 +283,13 @@ fn install_inner(args: InstallArgs, show_banner: bool) -> Result<()> {
     cave_line(&format!("[DONE] patched exe: {}", lab_exe.display()))?;
     cave_line(&format!("[DONE] patched asar: {}", asar_path.display()))?;
 
+    if !args.no_shortcut {
+        match create_desktop_shortcut(&lab_exe) {
+            Ok(path) => cave_line(&format!("[DONE] desktop shortcut: {}", path.display()))?,
+            Err(err) => cave_line(&format!("[WARN] desktop shortcut failed: {err:#}"))?,
+        }
+    }
+
     if args.launch {
         cave_line("[ACK] launching patched Claude")?;
         let mut command = Command::new(&lab_exe);
@@ -289,6 +300,55 @@ fn install_inner(args: InstallArgs, show_banner: bool) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(windows)]
+fn create_desktop_shortcut(target: &Path) -> Result<PathBuf> {
+    let target = target
+        .canonicalize()
+        .with_context(|| format!("failed to canonicalize {}", target.display()))?;
+    let workdir = target
+        .parent()
+        .context("patched exe has no parent directory")?
+        .to_path_buf();
+    let script = r#"
+$ErrorActionPreference = 'Stop'
+$ws = New-Object -ComObject WScript.Shell
+$desktop = $ws.SpecialFolders.Item('Desktop')
+$linkPath = Join-Path $desktop 'Lain Claude.lnk'
+$shortcut = $ws.CreateShortcut($linkPath)
+$shortcut.TargetPath = $args[0]
+$shortcut.WorkingDirectory = $args[1]
+$shortcut.IconLocation = $args[0] + ',0'
+$shortcut.Description = 'Launch patched Claude Desktop'
+$shortcut.Save()
+Write-Output $linkPath
+"#;
+    let output = Command::new("powershell")
+        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script])
+        .arg(&target)
+        .arg(&workdir)
+        .output()
+        .context("failed to run PowerShell shortcut creator")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        bail!("{}", stderr.trim());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let link = stdout
+        .lines()
+        .last()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .context("shortcut creator did not return a path")?;
+    Ok(PathBuf::from(link))
+}
+
+#[cfg(not(windows))]
+fn create_desktop_shortcut(_target: &Path) -> Result<PathBuf> {
+    bail!("desktop shortcuts are only supported on Windows")
 }
 
 /*
