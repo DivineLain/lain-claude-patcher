@@ -109,6 +109,24 @@ If cave man patch with `--in-place`, Store update overwrite patch. Cave man re-r
 
 CSS append survive across update only if CSS file path stable. Anthropic Vite bundle hash CSS filename. Update change hash. Append script must re-find file. Append script also break if Anthropic turn ASAR integrity check back on. Cave man go one layer up. Cave man patch JS bundle. Cave man flip integrity fuse. Cave man theme load every run because cave man theme part of bundle now. More work first time. Less work every time after.
 
+## Summoning Vibecoders
+
+Cave man summon vibecoders. Cave man need help. Inspect DOM, find class Anthropic forgot to expose as a CSS variable, write tiny patch, send PR. Selector spelunkers welcome. Theme tinkerers welcome. Anyone who has ever right-clicked an element and whispered *"why is this `1rem` hardcoded"* welcome.
+
+Goal is simple: make Claude readable. For everyone. The eyes-too-tired crowd. The dyslexia crowd. The 4K crowd. The "I just woke up and the screen is fuzzy" crowd. The "my cousin actually needs accessibility" crowd. All of them.
+
+If you can write five lines of CSS or fifty lines of JS that fix one papercut, that is a contribution. PRs open.
+
+## About The Monolith
+
+A single JS monolith is injected. Why? I don't know. I figured out it was going to be annoying to patch otherwise. One file. One IIFE. One shadow root. State lives in `localStorage`. Done.
+
+If you want to write an interface, an abstraction, dependency injection, a mock, a factory, a factory of factories, a service locator, a strategy pattern wrapping a visitor pattern wrapping a command pattern, and get the blessing of Uncle Bob, we won't accept it, but you do you. Maybe you want to roll like it's 2005 Java at your day job. I get it. Some people grow tomatoes. Some people write `AbstractClaudeRendererFactoryBeanProvider`. Healing is a journey.
+
+Maybe you want to run mock tests. Create `IClaudeInterface` and inject Claude (the entire application, all of it, the binaries, the user, the universe) as a constructor argument so you will pass the code review your Senior Architect is mentally running on you in the shower. Stub out `IShadowRoot`. Mock `IDocument`. Sacrifice a goat to the SOLID principles. I don't know, you do you. You are free to fork. The license is **Good Luck With That Public License** for a reason.
+
+But the main repo stays one file. One JS. One IIFE. One vibe. Cave man rule.
+
 ## Disclaimer
 
 Cave man no affiliate with Anthropic. Anthropic no endorse. Anthropic probably mad. Cave man no care.
