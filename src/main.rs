@@ -42,6 +42,7 @@ use std::{
     io::{self, Write},
     path::{Path, PathBuf},
     process::Command,
+    time::{SystemTime, UNIX_EPOCH},
 };
 use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 use walkdir::WalkDir;
@@ -52,6 +53,7 @@ const FUSE_DISABLED: u8 = b'0';
 const BLOCK_SIZE: usize = 4 * 1024 * 1024;
 const MAIN_VIEW: &str = ".vite/build/mainView.js";
 const DEFAULT_IIFE: &str = include_str!("../assets/io-claude-theme.js");
+const SHORTCUT_ICON: &[u8] = include_bytes!("../craude.ico");
 const ORANGE: (u8, u8, u8) = (255, 106, 0);
 const YELLOW: (u8, u8, u8) = (255, 234, 0);
 
@@ -286,7 +288,7 @@ fn install_inner(args: InstallArgs, show_banner: bool) -> Result<()> {
     cave_line(&format!("[DONE] patched asar: {}", asar_path.display()))?;
 
     if !args.no_shortcut {
-        match create_desktop_shortcut(&lab_exe) {
+        match create_desktop_shortcut(&lab_exe, &target) {
             Ok(path) => cave_line(&format!("[DONE] desktop shortcut: {}", path.display()))?,
             Err(err) => cave_line(&format!("[WARN] desktop shortcut failed: {err:#}"))?,
         }
@@ -305,7 +307,7 @@ fn install_inner(args: InstallArgs, show_banner: bool) -> Result<()> {
 }
 
 #[cfg(windows)]
-fn create_desktop_shortcut(target: &Path) -> Result<PathBuf> {
+fn create_desktop_shortcut(target: &Path, app_dir: &Path) -> Result<PathBuf> {
     let target = target
         .canonicalize()
         .with_context(|| format!("failed to canonicalize {}", target.display()))?;
@@ -313,25 +315,46 @@ fn create_desktop_shortcut(target: &Path) -> Result<PathBuf> {
         .parent()
         .context("patched exe has no parent directory")?
         .to_path_buf();
+    let icon = app_dir.join("CRAUDE_FIXED.ico");
+    fs::write(&icon, SHORTCUT_ICON)
+        .with_context(|| format!("failed to write shortcut icon {}", icon.display()))?;
+    let icon = icon
+        .canonicalize()
+        .with_context(|| format!("failed to canonicalize {}", icon.display()))?;
+    let target_arg = windows_shell_path(&target);
+    let workdir_arg = windows_shell_path(&workdir);
+    let icon_arg = windows_shell_path(&icon);
+    let script_path = env::temp_dir().join(format!(
+        "craude-shortcut-{}.ps1",
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis()
+    ));
     let script = r#"
 $ErrorActionPreference = 'Stop'
 $ws = New-Object -ComObject WScript.Shell
 $desktop = $ws.SpecialFolders.Item('Desktop')
-$linkPath = Join-Path $desktop 'Lain Claude.lnk'
+$linkPath = Join-Path $desktop 'CRAUDE_FIXED.lnk'
 $shortcut = $ws.CreateShortcut($linkPath)
-$shortcut.TargetPath = $args[0]
-$shortcut.WorkingDirectory = $args[1]
-$shortcut.IconLocation = $args[0] + ',0'
+$shortcut.TargetPath = $env:CRAUDE_TARGET
+$shortcut.WorkingDirectory = $env:CRAUDE_WORKDIR
+$shortcut.IconLocation = $env:CRAUDE_ICON + ',0'
 $shortcut.Description = 'Launch patched Claude Desktop'
 $shortcut.Save()
 Write-Output $linkPath
 "#;
+    fs::write(&script_path, script)
+        .with_context(|| format!("failed to write {}", script_path.display()))?;
     let output = Command::new("powershell")
-        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script])
-        .arg(&target)
-        .arg(&workdir)
+        .args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"])
+        .arg(&script_path)
+        .env("CRAUDE_TARGET", target_arg)
+        .env("CRAUDE_WORKDIR", workdir_arg)
+        .env("CRAUDE_ICON", icon_arg)
         .output()
         .context("failed to run PowerShell shortcut creator")?;
+    let _ = fs::remove_file(&script_path);
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -348,8 +371,20 @@ Write-Output $linkPath
     Ok(PathBuf::from(link))
 }
 
+#[cfg(windows)]
+fn windows_shell_path(path: &Path) -> String {
+    let text = path.display().to_string();
+    if let Some(rest) = text.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{rest}")
+    } else if let Some(rest) = text.strip_prefix(r"\\?\") {
+        rest.to_string()
+    } else {
+        text
+    }
+}
+
 #[cfg(not(windows))]
-fn create_desktop_shortcut(_target: &Path) -> Result<PathBuf> {
+fn create_desktop_shortcut(_target: &Path, _app_dir: &Path) -> Result<PathBuf> {
     bail!("desktop shortcuts are only supported on Windows")
 }
 

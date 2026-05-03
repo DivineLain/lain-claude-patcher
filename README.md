@@ -42,7 +42,7 @@ Wired exist. Real exist. Layer between thin. Anonymous network identity stay ano
 4. Tool back up `app.asar` and `Claude.exe` to `lain-backups\<timestamp>\`. Cave man no smash without backup. Cave man learn from time before.
 5. Tool clone `Claude.exe` to `Claude.no-asar-integrity.exe`. Tool flip Electron fuse byte at `FUSE_ENABLE_EMBEDDED_ASAR_INTEGRITY_VALIDATION` (index 4). Patched ASAR now boot without hash check fail.
 6. Tool read `app.asar`. Tool find `.vite/build/mainView.js`. Tool inject IIFE before sourcemap marker. IIFE guard origin (`claude.ai` / `claude.com` / `localhost` / `*.ant.dev`) and wait for `DOMContentLoaded`. Tool rebuild ASAR with proper SHA256 integrity metadata and 4 MiB block hashes. Native `.node` `.dll` `.exe` go to `app.asar.unpacked` because Electron load them from disk.
-7. Tool create `Lain Claude` desktop shortcut to patched exe, unless cave man pass `--no-shortcut`.
+7. Tool create `CRAUDE_FIXED` desktop shortcut to patched exe, unless cave man pass `--no-shortcut`.
 8. Tool optional launch patched exe. Tool optional set `CLAUDE_DEV_TOOLS=detach` so cave man see DevTools.
 
 Cave man IIFE bundled is `assets/io-claude-theme.js` -- Cave Man Theme Creator. Drag panel. Pick color. Bump font. Save to `localStorage`. Survive reload. ANTHROPIC button revert color but keep big font. RANDOMIZE button. Cave man approve.
