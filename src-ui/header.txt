@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: GLWTPL
+/*
+ * io-claude-creator.js
+ *
+ * Version: @(#)io-claude-creator.js 1.0.0 2026
+ *
+ * Description: Cave Man Theme Creator for Claude.
+ *              Anthropic suck. Font too fucking small. Cave man squint at 2K.
+ *              Cave man squint harder at 4K. Cave man eye hurt. Cave man head hurt.
+ *              Theme boring. Beige and white. Cave man see beige all day at job.
+ *              Cave man no want beige at home. Cave man want black. Cave man want pink.
+ *              Cave man want amber. Cave man want phosphor green like 1985 CRT.
+ *              Accessibility broken. Sidebar text grey-on-grey. Cave man cousin who
+ *              actually need accessibility — fucked. Anthropic care? Anthropic gaslight.
+ *              "we hear you, working on it." That was 2024. Still nothing.
+ *              Cave man tired of waiting for Anthropic to fix what users been
+ *              screaming about for years. Cave man write own theme creator.
+ *              Cave man inject panel. Cave man drag panel. Cave man pick color.
+ *              Cave man bump font 16px minimum. Cave man read. Cave man eye thank.
+ *              Cave man theme save to localStorage. Cave man theme persist.
+ *              Cave man press ANTHROPIC button to revert colors but keep big font.
+ *              Anthropic mad? Cave man no care. Anthropic gaslight cave man? Cave man
+ *              already gaslight himself daily. Immune.
+ *
+ *
+ *        ██▓    ▄▄▄     ▓██   ██▓▓█████  ██▀███
+ *       ▓██▒   ▒████▄    ▒██  ██▒▓█   ▀ ▓██ ▒ ██▒
+ *       ▒██░   ▒██  ▀█▄   ▒██ ██░▒███   ▓██ ░▄█ ▒
+ *       ▒██░   ░██▄▄▄▄██  ░ ▐██▓░▒▓█ ▄ ▒██▀▀█▄
+ *       ░██████▒▓█   ▓██▒ ░ ██▒▓░░▒████▒░██▓ ▒██▒
+ *       ░ ▒░▓  ░▒▒   ▓▒█░  ██▒▒▒ ░░ ▒░ ░░ ▒▓ ░▒▓░
+ *       ░ ░ ▒  ░ ▒   ▒▒ ░▓██ ░▒░  ░ ░  ░  ░▒ ░ ▒░
+ *         ░ ░    ░   ▒   ▒ ▒ ░░     ░     ░░   ░
+ *           ░  ░     ░  ░░ ░        ░  ░   ░
+ */

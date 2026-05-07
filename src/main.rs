@@ -30,10 +30,10 @@
  *           ░  ░     ░  ░░ ░        ░  ░   ░
  */
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use asar::AsarReader;
 use clap::{Parser, Subcommand};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
@@ -45,7 +45,7 @@ use std::{
     thread,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
-use time::{format_description::well_known::Rfc3339, OffsetDateTime};
+use time::{OffsetDateTime, format_description::well_known::Rfc3339};
 use walkdir::WalkDir;
 
 const SENTINEL: &[u8] = b"dL7pKGdnNz796PbbjQWNKmHXBZaB9tsX";
@@ -66,7 +66,11 @@ const YELLOW: (u8, u8, u8) = (255, 234, 0);
  * User say launch. Cave man start patched binary.
  */
 #[derive(Parser, Debug)]
-#[command(author, version, about = "Patch Claude Desktop with a preload IIFE theme.")]
+#[command(
+    author,
+    version,
+    about = "Patch Claude Desktop with a preload IIFE theme."
+)]
 struct Cli {
     #[command(subcommand)]
     command: Option<CommandArgs>,
@@ -92,10 +96,16 @@ struct InstallArgs {
     )]
     out: Option<PathBuf>,
 
-    #[arg(long, help = "JavaScript IIFE file to append. Defaults to bundled io-claude-theme.js.")]
+    #[arg(
+        long,
+        help = "JavaScript IIFE file to append. Defaults to bundled io-claude-theme.js."
+    )]
     iife: Option<PathBuf>,
 
-    #[arg(long, help = "Patch the source folder itself. Default copies source to --out first.")]
+    #[arg(
+        long,
+        help = "Patch the source folder itself. Default copies source to --out first."
+    )]
     in_place: bool,
 
     #[arg(long, help = "Launch the patched exe after patching.")]
@@ -138,8 +148,8 @@ fn enable_ansi_colors() {
     use windows_sys::Win32::{
         Foundation::INVALID_HANDLE_VALUE,
         System::Console::{
-            GetConsoleMode, GetStdHandle, SetConsoleMode, ENABLE_VIRTUAL_TERMINAL_PROCESSING,
-            STD_OUTPUT_HANDLE,
+            ENABLE_VIRTUAL_TERMINAL_PROCESSING, GetConsoleMode, GetStdHandle, STD_OUTPUT_HANDLE,
+            SetConsoleMode,
         },
     };
 
@@ -275,7 +285,8 @@ fn install_inner(args: InstallArgs, show_banner: bool) -> Result<()> {
         cave_line("[WARN] patching source folder in-place")?;
     } else if target.exists() {
         cave_line("[WARN] removing existing output folder")?;
-        fs::remove_dir_all(&target).with_context(|| format!("failed to remove {}", target.display()))?;
+        fs::remove_dir_all(&target)
+            .with_context(|| format!("failed to remove {}", target.display()))?;
     }
 
     if !args.in_place {
@@ -449,8 +460,11 @@ fn restore_inner(args: RestoreArgs, show_banner: bool) -> Result<()> {
     let latest = latest_backup(&backup_root)?;
     cave_line(&format!("[ACK] restoring from {}", latest.display()))?;
 
-    fs::copy(latest.join("app.asar"), target.join("resources").join("app.asar"))
-        .context("failed to restore app.asar")?;
+    fs::copy(
+        latest.join("app.asar"),
+        target.join("resources").join("app.asar"),
+    )
+    .context("failed to restore app.asar")?;
     let backup_exe = latest.join("Claude.exe");
     if backup_exe.is_file() {
         fs::copy(&backup_exe, target.join("Claude.exe")).context("failed to restore Claude.exe")?;
@@ -486,7 +500,9 @@ fn validate_claude_app(dir: &Path) -> Result<()> {
  *
  * Store Claude lives under WindowsApps.
  * Squirrel Claude lives under LocalAppData\AnthropicClaude\app-*.
- * Cave man collect both. Highest version wins.
+ * Cave man collect both. Newest modified install wins.
+ * Store build numbers are not semver-friendly: 1.5354 can sort above 1.6259
+ * numerically even when Windows just installed 1.6259 as the current app.
  */
 #[derive(Debug)]
 struct ClaudeCandidate {
@@ -501,9 +517,9 @@ fn find_claude_install() -> Result<PathBuf> {
     collect_local_claude_candidates(&mut candidates);
 
     candidates.sort_by(|a, b| {
-        a.version
-            .cmp(&b.version)
-            .then_with(|| a.modified.cmp(&b.modified))
+        a.modified
+            .cmp(&b.modified)
+            .then_with(|| a.version.cmp(&b.version))
             .then_with(|| a.path.cmp(&b.path))
     });
     candidates
@@ -530,7 +546,10 @@ fn collect_store_claude_candidates(candidates: &mut Vec<ClaudeCandidate>) {
         if app.join("Claude.exe").is_file() && app.join("resources").join("app.asar").is_file() {
             candidates.push(ClaudeCandidate {
                 version: parse_store_claude_version(&name),
-                modified: entry.metadata().and_then(|metadata| metadata.modified()).ok(),
+                modified: entry
+                    .metadata()
+                    .and_then(|metadata| metadata.modified())
+                    .ok(),
                 path: app,
             });
         }
@@ -555,7 +574,10 @@ fn collect_local_claude_candidates(candidates: &mut Vec<ClaudeCandidate>) {
         if app.join("Claude.exe").is_file() && app.join("resources").join("app.asar").is_file() {
             candidates.push(ClaudeCandidate {
                 version: parse_local_claude_version(&name),
-                modified: entry.metadata().and_then(|metadata| metadata.modified()).ok(),
+                modified: entry
+                    .metadata()
+                    .and_then(|metadata| metadata.modified())
+                    .ok(),
                 path: app,
             });
         }
@@ -672,9 +694,7 @@ fn copy_dir(source: &Path, out: &Path) -> Result<()> {
 fn close_claude_instances() -> Result<()> {
     cave_line("[ACK] closing running Claude instances")?;
     for image in ["Claude.exe", "Claude.no-asar-integrity.exe"] {
-        let _ = Command::new("taskkill")
-            .args(["/IM", image, "/F"])
-            .output();
+        let _ = Command::new("taskkill").args(["/IM", image, "/F"]).output();
     }
     Ok(())
 }
@@ -727,7 +747,10 @@ fn find_all(haystack: &[u8], needle: &[u8]) -> Vec<usize> {
     let mut positions = Vec::new();
     let mut start = 0;
     while start + needle.len() <= haystack.len() {
-        if let Some(idx) = haystack[start..].windows(needle.len()).position(|w| w == needle) {
+        if let Some(idx) = haystack[start..]
+            .windows(needle.len())
+            .position(|w| w == needle)
+        {
             let pos = start + idx;
             positions.push(pos);
             start = pos + 1;
@@ -746,8 +769,10 @@ fn find_all(haystack: &[u8], needle: &[u8]) -> Vec<usize> {
  */
 fn patch_asar(asar_path: &Path, iife: &str) -> Result<()> {
     cave_line("[ACK] patching app.asar")?;
-    let original = fs::read(asar_path).with_context(|| format!("failed to read {}", asar_path.display()))?;
-    let reader = AsarReader::new(&original, asar_path.to_path_buf()).context("failed to parse app.asar")?;
+    let original =
+        fs::read(asar_path).with_context(|| format!("failed to read {}", asar_path.display()))?;
+    let reader =
+        AsarReader::new(&original, asar_path.to_path_buf()).context("failed to parse app.asar")?;
 
     let main_file = reader
         .files()
@@ -755,7 +780,8 @@ fn patch_asar(asar_path: &Path, iife: &str) -> Result<()> {
         .find(|(path, _)| normalize_asar_path(path) == MAIN_VIEW)
         .map(|(_, file)| file)
         .with_context(|| format!("missing {}", MAIN_VIEW))?;
-    let main_js = std::str::from_utf8(main_file.data()).context("mainView.js is not valid UTF-8")?;
+    let main_js =
+        std::str::from_utf8(main_file.data()).context("mainView.js is not valid UTF-8")?;
     let patched_main = inject_iife(main_js, iife)?;
 
     let unpack_dir = asar_path.with_extension("asar.unpacked");

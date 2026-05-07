@@ -34,6 +34,9 @@
  *           ░  ░     ░  ░░ ░        ░  ░   ░
  */
 
+// GENERATED FILE. Edit src-ui/* and run:
+//   node tools/build-theme-payload.mjs
+
 (() => {
   "use strict";
 
@@ -81,8 +84,12 @@
         bg: STATE.bg,
         text: STATE.text,
         font: STATE.font,
+        rootSize: STATE.rootSize,
         sizes: STATE.sizes,
         leading: STATE.leading,
+        layout: STATE.layout,
+        wallpaper: STATE.wallpaper,
+        sidebarWallpaper: STATE.sidebarWallpaper,
         codePreset: STATE.codePreset,
         mode: STATE.mode,
         live: STATE.live
@@ -98,8 +105,12 @@
       if (last.bg)         STATE.bg = last.bg;
       if (last.text)       STATE.text = last.text;
       if (last.font)       { STATE.font = last.font; STATE.fontPending = last.font; }
+      if (typeof last.rootSize === "number" && isFinite(last.rootSize)) STATE.rootSize = last.rootSize;
       if (last.sizes)      STATE.sizes = { ...DEFAULT_SIZES, ...last.sizes };
       if (last.leading)    STATE.leading = { ...DEFAULT_LEADING, ...last.leading };
+      if (last.layout)     STATE.layout = { ...DEFAULT_LAYOUT, ...last.layout };
+      if (last.wallpaper)  STATE.wallpaper = { ...DEFAULT_WALLPAPER, ...last.wallpaper };
+      if (last.sidebarWallpaper) STATE.sidebarWallpaper = { ...DEFAULT_SIDEBAR_WALLPAPER, ...last.sidebarWallpaper };
       if (last.codePreset) STATE.codePreset = last.codePreset;
       if (last.mode)       STATE.mode = last.mode;
       if (typeof last.live === "boolean") STATE.live = last.live;
@@ -117,10 +128,20 @@
   // Cave man already burned by this. Lesson stuck.
   // ============================================================
   const DEFAULT_SIZES = { caption: 10, footnote: 12, code: 12, body: 13, heading: 14, prompt: 16, title: 20 };
+  // Root font-size for :root. Our overridden tokens are emitted in rem against
+  // a fixed 16px denominator (web standard), so bumping this scales every
+  // token we override (text, leading, sidebar row font, etc.) together —
+  // closer to "Anthropic-style" proportional scaling than per-tier px tweaks
+  // alone. Default 16 = no change vs. previous behavior. Range exposed in
+  // the SIZES tab as the "root" row.
+  const DEFAULT_ROOT_SIZE = 16;
   // Per-tier line-height multipliers. Code/body default to generous values
   // because Anthropic's stock leading is too tight on multi-line responses.
   // Sliders let the user dial 1.0–2.5. Computed leading = round(size × ratio)px.
   const DEFAULT_LEADING = { caption: 1.20, footnote: 1.17, code: 1.60, body: 1.50, heading: 1.29, prompt: 1.31, title: 1.20 };
+  const DEFAULT_LAYOUT = { mainWidth: 100, mainMarginLeft: 0, chatWidth: 100 };
+  const DEFAULT_WALLPAPER = { enabled: false, image: "", opacity: 18, blend: "normal" };
+  const DEFAULT_SIDEBAR_WALLPAPER = { enabled: false, image: "", opacity: 18 };
 
   const STATE = {
     name: "lain-claude",
@@ -132,8 +153,12 @@
     // persists via persistLast and survives reloads.
     font: "",
     fontPending: "",
+    rootSize: DEFAULT_ROOT_SIZE,
     sizes: { ...DEFAULT_SIZES },
     leading: { ...DEFAULT_LEADING },
+    layout: { ...DEFAULT_LAYOUT },
+    wallpaper: { ...DEFAULT_WALLPAPER },
+    sidebarWallpaper: { ...DEFAULT_SIDEBAR_WALLPAPER },
     codePreset: "LAIN",
     mode: "DARK",
     live: true,
@@ -141,24 +166,56 @@
   };
 
   // ============================================================
+  // ============================================================
   // THEMES (built-in)
   //
-  // 17 themes hand-picked. Top group ported from themes_to_port/ — user's
-  // own CSS files. Bottom group is house themes. First 8 of all 17 surface
-  // as quick-pick chips in the CREATOR tab. Full grid in THEMES tab.
+  // 47 themes. Top group is ported from kernelstyle/themes, excluding NEW/.
+  // Bottom group is house themes. First 8 surface as quick-pick chips in the
+  // CREATOR tab. Full grid in THEMES tab.
   // No Dracula. No Nord. Cave man write own.
   // ============================================================
   const THEMES = [
-    // ported from themes_to_port/ — user's hand-tuned CSS
-    { name: "lain",             accent: "#ff4da6", bg: "#0a0a14", text: "#e6e6ff", code: "LAIN"  },
-    { name: "ultraviolet",      accent: "#9d00ff", bg: "#0a0012", text: "#e6ccff", code: "MATCH" },
-    { name: "dark-sakura",      accent: "#ffb7d5", bg: "#1a0f14", text: "#ffffff", code: "LAIN"  },
-    { name: "phosphor-amber",   accent: "#ffb000", bg: "#0a0700", text: "#ffb000", code: "LAIN"  },
-    { name: "phosphor-green",   accent: "#33ff66", bg: "#000a02", text: "#33ff66", code: "LAIN"  },
-    { name: "phosphor-purple",  accent: "#c266ff", bg: "#07000a", text: "#c266ff", code: "LAIN"  },
-    { name: "phosphor-red",     accent: "#ff4d4d", bg: "#0a0202", text: "#ff4d4d", code: "LAIN"  },
-    { name: "slate-monochrome", accent: "#778899", bg: "#0e0e0f", text: "#f0f4f8", code: "MUTED" },
-    { name: "noir",             accent: "#f0f0f0", bg: "#000000", text: "#ffffff", code: "LAIN"  },
+    // ported from A:/SysPulse/UIFRONTEND/html/kernelstyle/themes
+    { name: "acid-bath",         accent: "#ccff00", bg: "#050a00", text: "#f5ffe0", code: "MATCH"    },
+    { name: "beige",             accent: "#a8323f", bg: "#f5f1e8", text: "#3a3530", code: "MUTED"    },
+    { name: "coral-burn",        accent: "#ff5577", bg: "#0f0508", text: "#ffffff", code: "MATCH"    },
+    { name: "crimson-surge",     accent: "#ff0066", bg: "#140008", text: "#ffffff", code: "MATCH"    },
+    { name: "dark-sakura",       accent: "#ffb7d5", bg: "#1a0f14", text: "#ffffff", code: "LAIN"     },
+    { name: "deep-cyan",         accent: "#00ffff", bg: "#001a1a", text: "#e0ffff", code: "MATCH"    },
+    { name: "default",           accent: "#dc1f2d", bg: "#0d0607", text: "#ffffff", code: "MATCH"    },
+    { name: "dijon-dusk",        accent: "#c9a227", bg: "#110d05", text: "#f0e6c8", code: "MATCH"    },
+    { name: "ember-steel",       accent: "#ff8844", bg: "#0f0804", text: "#ffffff", code: "MATCH"    },
+    { name: "forest-night",      accent: "#e6ffe6", bg: "#0a1a0a", text: "#e6ffe6", code: "MATCH"    },
+    { name: "gold",              accent: "#ffd700", bg: "#0a0a0a", text: "#ffffff", code: "MATCH"    },
+    { name: "gunmetal-tactical", accent: "#9caf3e", bg: "#0d0f0c", text: "#e8e6dd", code: "MUTED"    },
+    { name: "hc-white",          accent: "#7e00ff", bg: "#ffffff", text: "#000000", code: "MUTED"    },
+    { name: "lain",              accent: "#ff4da6", bg: "#0a0a14", text: "#e6e6ff", code: "LAIN"     },
+    { name: "leather-bourbon",   accent: "#C87833", bg: "#000000", text: "#f5ead8", code: "MATCH"    },
+    { name: "light-sakura",      accent: "#c72c48", bg: "#fff5f7", text: "#2a1a1d", code: "MATCH"    },
+    { name: "light-teal",        accent: "#008b8b", bg: "#f0fafa", text: "#0a1a1a", code: "MATCH"    },
+    { name: "matrix",            accent: "#00ff41", bg: "#0a0a0a", text: "#ffffff", code: "TERMINAL" },
+    { name: "mauve-dust",        accent: "#b080ab", bg: "#0f0a0e", text: "#ebd9e6", code: "MATCH"    },
+    { name: "midnight-cobalt",   accent: "#2962ff", bg: "#050816", text: "#ffffff", code: "MATCH"    },
+    { name: "neon-void",         accent: "#ff0060", bg: "#0f0306", text: "#ffffff", code: "MATCH"    },
+    { name: "noir",              accent: "#f0f0f0", bg: "#000000", text: "#ffffff", code: "LAIN"     },
+    { name: "periwinkle-mist",   accent: "#8a9dff", bg: "#08090f", text: "#e8eaf5", code: "MATCH"    },
+    { name: "phosphor-amber",    accent: "#ffb000", bg: "#0a0700", text: "#ffb000", code: "LAIN"     },
+    { name: "phosphor-blue",     accent: "#4d8aff", bg: "#00040a", text: "#4d8aff", code: "MATCH"    },
+    { name: "phosphor-cyan",     accent: "#4dffff", bg: "#000a0a", text: "#4dffff", code: "MATCH"    },
+    { name: "phosphor-green",    accent: "#33ff66", bg: "#000a02", text: "#33ff66", code: "LAIN"     },
+    { name: "phosphor-purple",   accent: "#c266ff", bg: "#07000a", text: "#c266ff", code: "LAIN"     },
+    { name: "phosphor-red",      accent: "#ff4d4d", bg: "#0a0202", text: "#ff4d4d", code: "LAIN"     },
+    { name: "salmon-tide",       accent: "#fa8072", bg: "#14080a", text: "#ffe6e0", code: "MATCH"    },
+    { name: "slate-monochrome",  accent: "#778899", bg: "#0e0e0f", text: "#f0f4f8", code: "MUTED"    },
+    { name: "teal",              accent: "#00ffcc", bg: "#0a0a0a", text: "#ffffff", code: "MATCH"    },
+    { name: "terracotta-earth",  accent: "#c46a4d", bg: "#110a06", text: "#f0d8c4", code: "MATCH"    },
+    { name: "tritanopia",        accent: "#0000ff", bg: "#1a1a00", text: "#9999ff", code: "MATCH"    },
+    { name: "ultraviolet",       accent: "#9d00ff", bg: "#0a0012", text: "#ffffff", code: "MATCH"    },
+    { name: "vaporwave",         accent: "#ff00ff", bg: "#1a0033", text: "#00ffff", code: "MATCH"    },
+    { name: "violet",            accent: "#ff0080", bg: "#0a0612", text: "#ffffff", code: "MATCH"    },
+    { name: "void-transmission", accent: "#bb00ff", bg: "#08000f", text: "#f0f0ff", code: "MATCH"    },
+    { name: "void-wine",         accent: "#aa2255", bg: "#0d0306", text: "#ffffff", code: "MATCH"    },
+
     // house themes
     { name: "wired",            accent: "#00d9ff", bg: "#001214", text: "#aef0ff", code: "MATCH" },
     { name: "kerosene",         accent: "#ff6a00", bg: "#0d0500", text: "#ffd1a3", code: "MATCH" },
@@ -293,19 +350,33 @@
     ].map(([h,s,l]) => ({h, s:Math.max(0,Math.min(100,s)), l:Math.max(0,Math.min(100,l))}));
   }
 
-  function deriveText(hex, accentHex) {
+  function deriveText(hex, accentHex, bgHex) {
     const {h,s,l} = hexToHsl(hex);
 
     // ACHROMATIC: 100/72/42/23/23 — matches noir source curve.
+    // When bg has hue (dark-sakura wine, void-wine, crimson-surge, etc.) pure
+    // grayscale text reads as harsh grey against the tinted bg — Anthropic's
+    // --cds-gray-810..890 ramp carries h=60, s≈1.7% for exactly this reason
+    // (their greys harmonize with brand orange instead of clashing). Inherit
+    // bg's hue at low saturation (≤10) when bg has color. Noir keeps pure
+    // grayscale because its bg is also s=0 so the inheritance doesn't fire.
     if (s < 5) {
+      const bg = bgHex ? hexToHsl(bgHex) : null;
+      const tintH = bg && bg.s > 5 ? bg.h : 0;
+      const tintS = bg && bg.s > 5 ? Math.min(bg.s * 0.15, 10) : 0;
       const ramp = [l, l, l*0.72, l*0.42, l*0.23, Math.min(l*0.23, 23)];
-      return ramp.map(L => ({h:0, s:0, l:Math.max(0,Math.min(100,L))}));
+      return ramp.map(L => ({h:tintH, s:tintS, l:Math.max(0,Math.min(100,L))}));
     }
 
-    // MONOCHROME: phosphor curve, floor at L=6 so text-500 stays visible
-    // even for hypothetical low-L source text (dark amber → 4.8 sub-perception).
+    // MONOCHROME: phosphor curve. Floors on tier 4 (40) and tier 5 (28) keep
+    // sidebar metadata legible — Anthropic uses `text-text-400/80` for labels
+    // ("Pinned", "Drag to pin", section headers) and the unfloored curve dropped
+    // those to L≈18 × 0.8α onto bg L≈2, contrast ratio ~1.4:1. With floor 40 the
+    // alpha-mixed effective L is ~32 → ~3:1 vs near-black, clears WCAG large-text
+    // and stays readable. Tier 0–3 (the loud parts) still ride the source L,
+    // so the phosphor signature reads at the same intensity on body text.
     if (accentHex && isMonochromeTheme(hex, accentHex)) {
-      const ramp = [l, l, l*0.80, l*0.48, l*0.28, Math.max(l*0.16, 6)];
+      const ramp = [l, l, l*0.80, l*0.48, Math.max(l*0.28, 40), Math.max(l*0.16, 28)];
       return ramp.map(L => ({h, s, l:Math.max(0,Math.min(100,L))}));
     }
 
@@ -320,9 +391,18 @@
     ].map(([h,s,l]) => ({h, s:Math.max(0,Math.min(100,s)), l:Math.max(0,Math.min(100,l))}));
   }
 
-  function deriveBorders(textHex) {
+  function deriveBorders(textHex, bgHex) {
     const {h, s} = hexToHsl(textHex);
-    if (s < 5) return [{h:0,s:0,l:45},{h:0,s:0,l:36},{h:0,s:0,l:28},{h:0,s:0,l:22}];
+    if (s < 5) {
+      // Same hue-inheritance trick as deriveText — borders look more dialed-in
+      // when they share a sliver of bg's hue rather than being pure grey on
+      // tinted bg. Slightly more saturation than text (15 cap vs 10) since
+      // borders are large surfaces where subtle warmth reads as cohesion.
+      const bg = bgHex ? hexToHsl(bgHex) : null;
+      const tintH = bg && bg.s > 5 ? bg.h : 0;
+      const tintS = bg && bg.s > 5 ? Math.min(bg.s * 0.25, 15) : 0;
+      return [{h:tintH,s:tintS,l:45},{h:tintH,s:tintS,l:36},{h:tintH,s:tintS,l:28},{h:tintH,s:tintS,l:22}];
+    }
     return [{h,s:33,l:45},{h,s:33,l:36},{h,s:33,l:28},{h,s:33,l:22}];
   }
 
@@ -334,7 +414,7 @@
 
   function deriveZRamp(bgHex, textHex, accentHex) {
     const bg = deriveBg(bgHex);
-    const tx = deriveText(textHex, accentHex);
+    const tx = deriveText(textHex, accentHex, bgHex);
     return [bg[0], bg[1], bg[2], bg[3], bg[4], tx[4], tx[3]].map(c => hslHex(c.h,c.s,c.l));
   }
 
@@ -372,19 +452,36 @@
     const familyVars = hasFont ? `
   --family-ui: ${f} !important;
   --family-monospace: ${f} !important;` : "";
+    const fontFamilyVarsCds = hasFont ? `
+  --cds-font-sans: ${f} !important;
+  --cds-font-mono: ${f} !important;
+  --cds-font-voice: ${f} !important;` : "";
     const hljsFontLine = hasFont ? `font-family: ${f} !important;` : "";
-    const sz = (k) => t.sizes[k] + "px";
+    // Tokens are emitted in rem against a fixed 16px denominator (web
+    // standard). The :root font-size we set drives the actual rendered px:
+    // body=13 → 0.8125rem; at root=16 renders 13px, at root=20 renders
+    // 16.25px. Bumping the root scales every token we own — text + leading
+    // + chat-column font + df-row-font — together. Per-tier sliders still
+    // pick relative ratios; the root slider is the master scale.
+    const REM_DEN = 16;
+    const rootSize = (typeof t.rootSize === "number" && isFinite(t.rootSize) && t.rootSize > 0) ? t.rootSize : 16;
+    const remFmt = (px) => {
+      const n = px / REM_DEN;
+      return n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "") + "rem";
+    };
+    const sz = (k) => remFmt(t.sizes[k]);
     // Per-tier leading multipliers from lain originals so defaults reproduce
     // exactly. Code/body get most breathing (1.38-1.42); titles stay tight (1.20).
     // Leading driven by STATE.leading (user-adjustable per tier via sliders).
-    const lh = (k) => Math.round(t.sizes[k] * (t.leading[k] || DEFAULT_LEADING[k])) + "px";
+    const lr = (k) => (t.leading[k] || DEFAULT_LEADING[k]).toFixed(10).replace(/0+$/, "").replace(/\.$/, "");
+    const lh = (k) => remFmt(Math.round(t.sizes[k] * (t.leading[k] || DEFAULT_LEADING[k])));
 
     const accentBright = lighten(t.accent, 8);
     const accentDim    = darken(t.accent, 10);
 
     const bgRamp = deriveBg(t.bg);
-    const txRamp = deriveText(t.text, t.accent);
-    const bdRamp = deriveBorders(t.text);
+    const txRamp = deriveText(t.text, t.accent, t.bg);
+    const bdRamp = deriveBorders(t.text, t.bg);
     const proRamp = derivePro(t.text);
     const zHex = deriveZRamp(t.bg, t.text, t.accent);
 
@@ -393,7 +490,18 @@
     const bg2 = hslHex(bgRamp[2].h, bgRamp[2].s, bgRamp[2].l);
     const bg3 = hslHex(bgRamp[3].h, bgRamp[3].s, bgRamp[3].l);
     const tx0 = hslHex(txRamp[0].h, txRamp[0].s, txRamp[0].l);
+    const tx2 = hslHex(txRamp[2].h, txRamp[2].s, txRamp[2].l);
     const tx3 = hslHex(txRamp[3].h, txRamp[3].s, txRamp[3].l);
+
+    // On-accent foreground for ::selection and any "text on filled accent" use.
+    // Pick whichever of {tx0, bg0} has greater luminance distance from accent —
+    // works for both dark themes (tx0 light, bg0 dark) and light themes (tx0
+    // dark, bg0 light) without a hardcoded l<50 threshold that flips wrong on
+    // inverted palettes.
+    const accentL = hexToHsl(t.accent).l;
+    const _tx0L = hexToHsl(tx0).l;
+    const _bg0L = hexToHsl(bg0).l;
+    const onAccent = Math.abs(_tx0L - accentL) > Math.abs(_bg0L - accentL) ? tx0 : bg0;
 
     const trgb = hexToRgb(t.text);
     const tov = (a) => `rgba(${trgb.r}, ${trgb.g}, ${trgb.b}, ${a})`;
@@ -403,16 +511,129 @@
     const semWarning = code.builtin;
     const semError   = code.name;
     const semInfo    = code.type;
+    const diffMix = (base, color, pct) => `color-mix(in srgb, ${base} ${pct}%, ${color})`;
 
     const triple = (c) => hslTripleRaw(c.h, c.s, c.l);
 
     const borderMidHex = hslHex(bdRamp[0].h, bdRamp[0].s, bdRamp[0].l);
     const borderMidRgb = hexToRgb(borderMidHex);
     const borderRgba = (a) => `rgba(${borderMidRgb.r}, ${borderMidRgb.g}, ${borderMidRgb.b}, ${a})`;
+    const mainWidth = Math.max(30, Math.min(100, Number(t.layout?.mainWidth ?? DEFAULT_LAYOUT.mainWidth)));
+    const mainMarginLeft = Math.max(0, Math.min(70, Number(t.layout?.mainMarginLeft ?? DEFAULT_LAYOUT.mainMarginLeft)));
+    const chatWidth = Math.max(30, Math.min(100, Number(t.layout?.chatWidth ?? DEFAULT_LAYOUT.chatWidth)));
+    const wallpaper = { ...DEFAULT_WALLPAPER, ...(t.wallpaper || {}) };
+    const wallpaperOpacity = Math.max(0, Math.min(100, Number(wallpaper.opacity))) / 100;
+    const sidebarWallpaper = { ...DEFAULT_SIDEBAR_WALLPAPER, ...(t.sidebarWallpaper || {}) };
+    const sidebarWallpaperOpacity = Math.max(0, Math.min(100, Number(sidebarWallpaper.opacity))) / 100;
+    const wallpaperCss = wallpaper.enabled && wallpaper.image ? `
+.epitaxy-root .dframe-content-inner,
+[data-mode="dark"] .epitaxy-root .dframe-content-inner,
+.dframe-pane-host {
+  position: relative !important;
+  isolation: isolate !important;
+}
+.epitaxy-root .dframe-content-inner::before,
+[data-mode="dark"] .epitaxy-root .dframe-content-inner::before,
+.dframe-pane-host::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+  background: ${accentDim} !important;
+  -webkit-mask: url(${JSON.stringify(wallpaper.image)}) center / auto repeat !important;
+  mask: url(${JSON.stringify(wallpaper.image)}) center / auto repeat !important;
+  opacity: ${wallpaperOpacity} !important;
+  mix-blend-mode: ${wallpaper.blend || "normal"} !important;
+}
+.epitaxy-root .dframe-content-inner > *,
+[data-mode="dark"] .epitaxy-root .dframe-content-inner > *,
+.dframe-pane-host > * {
+  position: relative;
+  z-index: 1;
+}` : "";
+    const sidebarWallpaperCss = sidebarWallpaper.enabled && sidebarWallpaper.image ? `
+#frame-peek-popover {
+  position: relative !important;
+  isolation: isolate !important;
+}
+#frame-peek-popover::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+  background: ${accentDim} !important;
+  -webkit-mask: url(${JSON.stringify(sidebarWallpaper.image)}) center / auto repeat !important;
+  mask: url(${JSON.stringify(sidebarWallpaper.image)}) center / auto repeat !important;
+  opacity: ${sidebarWallpaperOpacity} !important;
+}
+#frame-peek-popover > * {
+  position: relative;
+  z-index: 1;
+}` : "";
 
-    return `html, body {
+    return `:root {
+  font-size: ${rootSize}px !important;
+}
+html, body {
   background: ${bg0} !important;
   background-color: ${bg0} !important;
+}
+
+/* Selection — Chrome's default blue is jarring against custom palettes.
+ * Bg = accent, fg = whichever of {tx0, bg0} is farther in luminance from
+ * accent (handles dark + light themes without a hardcoded threshold).
+ * text-shadow:none kills any inherited shadow so selection stays clean. */
+::selection {
+  background: ${t.accent} !important;
+  color: ${onAccent} !important;
+  text-shadow: none !important;
+}
+::-moz-selection {
+  background: ${t.accent} !important;
+  color: ${onAccent} !important;
+  text-shadow: none !important;
+}
+${hasFont ? `
+/* Letter-spacing reset — gated on hasFont. Anthropic's body styles tune
+ * letter-spacing for Anthropic Sans's tighter natural advance. Custom mono
+ * fonts (Space Mono, JetBrains Mono, Iosevka) carry their own tracking
+ * baked into the font, so the inherited letter-spacing stacks on top and
+ * makes glyphs feel "wider than they should be." Reset only when a custom
+ * font is active, so stock Anthropic typography keeps its intended rhythm.
+ * font-feature-settings/font-variation-settings are LEFT ALONE — preserves
+ * programming-font ligatures (calt) the user likely wants. */
+.epitaxy-root,
+.epitaxy-root .epitaxy-chat-column,
+.epitaxy-markdown,
+.font-claude-response-body,
+.hljs, code.hljs, pre code.hljs,
+.cds-root,
+.dframe-root {
+  letter-spacing: 0 !important;
+}` : ""}
+
+/* Surface backstop — Anthropic paints sidebar/content via
+ * color-mix(--cds-page-bg, --cds-clay, X%) which inherits our accent and
+ * tints the surface (e.g. leather-bourbon → brown sidebar, acid-bath →
+ * olive sidebar) even when bg=#000000. Force bg0 here so "bg means bg".
+ * Wallpaper ::before stacks on top of this; children sit at z-index 1. */
+.dframe-sidebar-body,
+#frame-peek-popover,
+.epitaxy-root .dframe-content-inner,
+[data-mode="dark"] .epitaxy-root .dframe-content-inner,
+.dframe-pane-host {
+  background: ${bg0} !important;
+  background-color: ${bg0} !important;
+}
+${wallpaperCss}
+${sidebarWallpaperCss}
+
+.epitaxy-root .flex-1.min-h-0.relative.isolate[class*="--epitaxy-scrim-inset-end:16px"],
+[data-mode="dark"] .epitaxy-root .flex-1.min-h-0.relative.isolate[class*="--epitaxy-scrim-inset-end:16px"] {
+  width: ${mainWidth}% !important;
+  margin-left: ${mainMarginLeft}% !important;
 }
 
 :root,
@@ -486,6 +707,96 @@
 
   --always-white: 0 0% 100% !important;
   --always-black: 0 0% 0% !important;
+
+  --code-theme-light-bg: ${bg2} !important;
+  --code-theme-dark-bg: ${bg2} !important;
+}
+
+.cds-root,
+[data-mode="dark"] .cds-root,
+.cds-root[data-mode="dark"] {${fontFamilyVarsCds}
+
+  --cds-surface-0: ${bg0} !important;
+  --cds-surface-1: ${bg1} !important;
+  --cds-surface-2: ${bg2} !important;
+  --cds-surface-3: ${bg3} !important;
+  --cds-page-bg: ${bg0} !important;
+  --cds-surface-panel: ${bg1} !important;
+  --cds-surface-popover: ${bg3} !important;
+
+  --cds-text-primary: ${tx0} !important;
+  --cds-text-secondary: ${tx2} !important;
+  --cds-text-muted: ${tx3} !important;
+  --cds-text-disabled: ${rgba(t.text, 0.35)} !important;
+
+  --cds-clay: ${t.accent} !important;
+  --cds-clay-emphasized: ${accentBright} !important;
+
+  --cds-fill-primary: ${t.accent} !important;
+  --cds-fill-primary-hover: ${accentBright} !important;
+  --cds-fill-accent: ${t.accent} !important;
+  --cds-fill-accent-hover: ${accentBright} !important;
+  --cds-fill-brand: ${t.accent} !important;
+  --cds-fill-brand-hover: ${accentBright} !important;
+
+  --cds-fill-danger: ${semError} !important;
+  --cds-fill-danger-hover: ${lighten(semError, 8)} !important;
+  --cds-fill-success: ${semSuccess} !important;
+  --cds-fill-success-hover: ${lighten(semSuccess, 8)} !important;
+  --cds-fill-warning: ${semWarning} !important;
+  --cds-fill-warning-hover: ${lighten(semWarning, 8)} !important;
+
+  --cds-text-accent: ${t.accent} !important;
+  --cds-text-danger: ${semError} !important;
+  --cds-text-success: ${semSuccess} !important;
+  --cds-text-warning: ${semWarning} !important;
+  --cds-text-pro: ${tx3} !important;
+  --cds-text-pink: ${accentBright} !important;
+
+  --cds-bg-accent: ${rgba(t.accent, 0.10)} !important;
+  --cds-bg-accent-chip: ${rgba(t.accent, 0.18)} !important;
+  --cds-bg-danger: ${rgba(semError, 0.10)} !important;
+  --cds-bg-danger-chip: ${rgba(semError, 0.18)} !important;
+  --cds-bg-success: ${rgba(semSuccess, 0.10)} !important;
+  --cds-bg-success-chip: ${rgba(semSuccess, 0.18)} !important;
+  --cds-bg-warning: ${rgba(semWarning, 0.10)} !important;
+  --cds-bg-warning-chip: ${rgba(semWarning, 0.18)} !important;
+  --cds-bg-pro: ${rgba(t.accent, 0.10)} !important;
+  --cds-bg-pro-chip: ${rgba(t.accent, 0.18)} !important;
+  --cds-bg-pink: ${rgba(t.accent, 0.10)} !important;
+  --cds-bg-pink-chip: ${rgba(t.accent, 0.18)} !important;
+
+  --cds-border-accent: ${rgba(t.accent, 0.40)} !important;
+  --cds-border-danger: ${rgba(semError, 0.40)} !important;
+  --cds-border-success: ${rgba(semSuccess, 0.40)} !important;
+  --cds-border-warning: ${rgba(semWarning, 0.40)} !important;
+  --cds-border-pro: ${rgba(t.accent, 0.40)} !important;
+
+  --cds-border: ${rgba(t.text, 0.10)} !important;
+  --cds-border-strong: ${rgba(t.text, 0.20)} !important;
+  --cds-border-stronger: ${rgba(t.text, 0.40)} !important;
+
+  --cds-on-primary: ${tx0} !important;
+  --cds-on-accent: ${tx0} !important;
+  --cds-on-brand: ${tx0} !important;
+  --cds-on-danger: #ffffff !important;
+  --cds-on-success: ${bg0} !important;
+  --cds-on-warning: ${bg0} !important;
+  --cds-on-pro: ${tx0} !important;
+
+  --cds-text-caption: ${sz('caption')} !important;
+  --cds-text-footnote: ${sz('footnote')} !important;
+  --cds-text-code: ${sz('code')} !important;
+  --cds-text-body: ${sz('body')} !important;
+  --cds-text-heading: ${sz('heading')} !important;
+  --cds-text-title: ${sz('title')} !important;
+
+  --cds-leading-caption: ${lh('caption')} !important;
+  --cds-leading-footnote: ${lh('footnote')} !important;
+  --cds-leading-code: ${lh('code')} !important;
+  --cds-leading-body: ${lh('body')} !important;
+  --cds-leading-heading: ${lh('heading')} !important;
+  --cds-leading-title: ${lh('title')} !important;
 }
 
 .dframe-root,
@@ -650,16 +961,24 @@
   --text-assistant-code: ${tx0} !important;
 }
 
-:host,
-:root,
-pre,
-code,
-[data-overflow="wrap"],
+.epitaxy-root .epitaxy-chat-column,
+[data-mode="dark"] .epitaxy-root .epitaxy-chat-column,
+.epitaxy-markdown {
+  --text-body: ${sz('body')} !important;
+  --leading-body: ${lr('body')} !important;
+  --chat-turn-gap: calc(var(--text-body) * var(--leading-body) * .75) !important;
+  --chat-item-gap: calc(var(--text-body) * var(--leading-body) * .5) !important;
+  width: ${chatWidth}% !important;
+  margin-inline: auto !important;
+  font-size: ${sz('body')} !important;
+  line-height: var(--leading-body) !important;
+}
+
 [data-diffs-header],
 [data-diff],
 [data-file],
-.epitaxy-diff,
-.diffs-container {
+[data-error-wrapper],
+[data-virtualizer-buffer] {
   --diffs-dark: ${tx0} !important;
   --diffs-dark-bg: ${bg2} !important;
   --diffs-dark-addition-color: ${semSuccess} !important;
@@ -671,6 +990,53 @@ code,
   --diffs-light-deletion-color: ${semError} !important;
   --diffs-light-modified-color: ${semInfo} !important;
   --diffs-min-number-column-width-default: 3ch !important;
+  --diffs-bg: ${bg2} !important;
+  --diffs-bg-buffer-override: ${bg1} !important;
+  --diffs-bg-hover-override: ${bg3} !important;
+  --diffs-bg-context-override: ${bg1} !important;
+  --diffs-bg-context-number-override: ${bg0} !important;
+  --diffs-bg-separator-override: ${hslHex(bdRamp[3].h, bdRamp[3].s, bdRamp[3].l)} !important;
+  --diffs-fg: ${tx0} !important;
+  --diffs-fg-number-override: ${tx3} !important;
+  --diffs-deletion-color-override: ${semError} !important;
+  --diffs-addition-color-override: ${semSuccess} !important;
+  --diffs-modified-color-override: ${semInfo} !important;
+  --diffs-bg-deletion-override: ${diffMix(bg2, semError, 78)} !important;
+  --diffs-bg-deletion-number-override: ${diffMix(bg2, semError, 86)} !important;
+  --diffs-bg-deletion-hover-override: ${diffMix(bg2, semError, 70)} !important;
+  --diffs-bg-deletion-emphasis-override: ${rgba(semError, 0.22)} !important;
+  --diffs-bg-addition-override: ${diffMix(bg2, semSuccess, 78)} !important;
+  --diffs-bg-addition-number-override: ${diffMix(bg2, semSuccess, 86)} !important;
+  --diffs-bg-addition-hover-override: ${diffMix(bg2, semSuccess, 70)} !important;
+  --diffs-bg-addition-emphasis-override: ${rgba(semSuccess, 0.22)} !important;
+  --diffs-bg-selection-override: ${diffMix(bg2, semInfo, 74)} !important;
+  --diffs-bg-selection-number-override: ${diffMix(bg2, semInfo, 66)} !important;
+  --diffs-bg-conflict-marker-override: ${diffMix(bg2, semWarning, 76)} !important;
+  --diffs-bg-conflict-current-override: ${diffMix(bg2, semSuccess, 76)} !important;
+  --diffs-bg-conflict-base-override: ${diffMix(bg2, semInfo, 78)} !important;
+  --diffs-bg-conflict-incoming-override: ${diffMix(bg2, semInfo, 72)} !important;
+  --diffs-bg-conflict-marker-number-override: ${diffMix(bg2, semWarning, 66)} !important;
+  --diffs-bg-conflict-current-number-override: ${diffMix(bg2, semSuccess, 66)} !important;
+  --diffs-bg-conflict-base-number-override: ${diffMix(bg2, semInfo, 68)} !important;
+  --diffs-bg-conflict-incoming-number-override: ${diffMix(bg2, semInfo, 62)} !important;
+  --conflict-bg-current-override: ${diffMix(bg2, semSuccess, 78)} !important;
+  --conflict-bg-incoming-override: ${diffMix(bg2, semInfo, 78)} !important;
+  --conflict-bg-current-number-override: ${diffMix(bg2, semSuccess, 86)} !important;
+  --conflict-bg-incoming-number-override: ${diffMix(bg2, semInfo, 84)} !important;
+  --conflict-bg-current-header-override: ${diffMix(bg2, semSuccess, 64)} !important;
+  --conflict-bg-incoming-header-override: ${diffMix(bg2, semInfo, 64)} !important;
+  --conflict-bg-current-header-number-override: ${diffMix(bg2, semSuccess, 58)} !important;
+  --conflict-bg-incoming-header-number-override: ${diffMix(bg2, semInfo, 58)} !important;
+  background-color: var(--diffs-bg) !important;
+  color: var(--diffs-fg) !important;
+}
+
+.epitaxy-markdown pre,
+.epitaxy-markdown pre:has(code),
+pre:has(> code.hljs) {
+  background: ${bg2} !important;
+  color: ${tx0} !important;
+  border-color: ${hslHex(bdRamp[3].h, bdRamp[3].s, bdRamp[3].l)} !important;
 }
 
 .hljs, pre code.hljs, code.hljs {
@@ -721,12 +1087,32 @@ code,
     const familyVars = hasFont ? `
   --family-ui: ${f} !important;
   --family-monospace: ${f} !important;` : "";
+    const fontFamilyVarsCds = hasFont ? `
+  --cds-font-sans: ${f} !important;
+  --cds-font-mono: ${f} !important;
+  --cds-font-voice: ${f} !important;` : "";
     const hljsFontLine = hasFont ? `font-family: ${f} !important;` : "";
-    const sz = (k) => t.sizes[k] + "px";
+    // Tokens in rem against fixed 16 denominator — same scheme as buildCss().
+    // :root font-size below drives the actual rendered px.
+    const REM_DEN = 16;
+    const rootSize = (typeof t.rootSize === "number" && isFinite(t.rootSize) && t.rootSize > 0) ? t.rootSize : 16;
+    const remFmt = (px) => {
+      const n = px / REM_DEN;
+      return n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "") + "rem";
+    };
+    const sz = (k) => remFmt(t.sizes[k]);
     // Leading driven by STATE.leading (user-adjustable per tier via sliders).
-    const lh = (k) => Math.round(t.sizes[k] * (t.leading[k] || DEFAULT_LEADING[k])) + "px";
+    const lr = (k) => (t.leading[k] || DEFAULT_LEADING[k]).toFixed(10).replace(/0+$/, "").replace(/\.$/, "");
+    const lh = (k) => remFmt(Math.round(t.sizes[k] * (t.leading[k] || DEFAULT_LEADING[k])));
+    const mainWidth = Math.max(30, Math.min(100, Number(t.layout?.mainWidth ?? DEFAULT_LAYOUT.mainWidth)));
+    const mainMarginLeft = Math.max(0, Math.min(70, Number(t.layout?.mainMarginLeft ?? DEFAULT_LAYOUT.mainMarginLeft)));
+    const chatWidth = Math.max(30, Math.min(100, Number(t.layout?.chatWidth ?? DEFAULT_LAYOUT.chatWidth)));
 
-    return `:root,
+    return `:root {
+  font-size: ${rootSize}px !important;
+}
+
+:root,
 [data-theme="claude"],
 [data-theme="claude"][data-mode="dark"],
 [data-color-version="v2"][data-theme="claude"],
@@ -737,9 +1123,34 @@ code,
 [data-color-version="v2"][data-theme="console"][data-mode="dark"] {${fontFamilyVars}
 }
 
+.cds-root,
+[data-mode="dark"] .cds-root,
+.cds-root[data-mode="dark"] {${fontFamilyVarsCds}
+
+  --cds-text-caption: ${sz('caption')} !important;
+  --cds-text-footnote: ${sz('footnote')} !important;
+  --cds-text-code: ${sz('code')} !important;
+  --cds-text-body: ${sz('body')} !important;
+  --cds-text-heading: ${sz('heading')} !important;
+  --cds-text-title: ${sz('title')} !important;
+
+  --cds-leading-caption: ${lh('caption')} !important;
+  --cds-leading-footnote: ${lh('footnote')} !important;
+  --cds-leading-code: ${lh('code')} !important;
+  --cds-leading-body: ${lh('body')} !important;
+  --cds-leading-heading: ${lh('heading')} !important;
+  --cds-leading-title: ${lh('title')} !important;
+}
+
 .dframe-root,
 [data-mode="dark"] .dframe-root {
   --df-row-font: ${sz('body')} !important;
+}
+
+.epitaxy-root .flex-1.min-h-0.relative.isolate[class*="--epitaxy-scrim-inset-end:16px"],
+[data-mode="dark"] .epitaxy-root .flex-1.min-h-0.relative.isolate[class*="--epitaxy-scrim-inset-end:16px"] {
+  width: ${mainWidth}% !important;
+  margin-left: ${mainMarginLeft}% !important;
 }
 
 .epitaxy-root,
@@ -762,6 +1173,19 @@ code,
   --leading-title: ${lh('title')} !important;
 }
 
+.epitaxy-root .epitaxy-chat-column,
+[data-mode="dark"] .epitaxy-root .epitaxy-chat-column,
+.epitaxy-markdown {
+  --text-body: ${sz('body')} !important;
+  --leading-body: ${lr('body')} !important;
+  --chat-turn-gap: calc(var(--text-body) * var(--leading-body) * .75) !important;
+  --chat-item-gap: calc(var(--text-body) * var(--leading-body) * .5) !important;
+  width: ${chatWidth}% !important;
+  margin-inline: auto !important;
+  font-size: ${sz('body')} !important;
+  line-height: var(--leading-body) !important;
+}
+
 .hljs, pre code.hljs, code.hljs {
   ${hljsFontLine}
 }
@@ -769,7 +1193,21 @@ code,
 .font-claude-response-body {
   font-size: ${sz('body')} !important;
   line-height: ${lh('body')} !important;
-}`;
+}
+${hasFont ? `
+/* Letter-spacing reset — gated on hasFont. Same logic as buildCss(): when
+ * a custom font is active, neutralize Anthropic's tuning so user fonts
+ * render at their designer-intended advance width. font-only mode IS
+ * exactly the case where this matters most (custom font + stock colors). */
+.epitaxy-root,
+.epitaxy-root .epitaxy-chat-column,
+.epitaxy-markdown,
+.font-claude-response-body,
+.hljs, code.hljs, pre code.hljs,
+.cds-root,
+.dframe-root {
+  letter-spacing: 0 !important;
+}` : ""}`;
   }
 
   // ============================================================
@@ -1051,6 +1489,19 @@ code,
 .font-input:focus { border-color: var(--io-accent); }
 .applied-tag { display: inline-block; padding: 2px 7px; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--io-accent); border: 1px solid var(--io-accent-dim); background: var(--io-accent-subtle); margin-top: 6px; }
 
+/* Styled file input — hides the native <input type=file> and renders a
+ * button + truncating filename inside a label. Clicking the label triggers
+ * the input via the standard <label><input/></label> nesting. We don't
+ * display:none the input because Firefox loses focusability that way; we
+ * pin it to 1×1 with opacity 0 instead. */
+.file-input { flex: 1; display: flex; align-items: stretch; min-width: 0; border: 1px solid var(--io-border); background: var(--io-surface-sunken); cursor: pointer; overflow: hidden; }
+.file-input:hover { border-color: var(--io-accent-dim); }
+.file-input input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.file-input .file-btn { background: var(--io-accent-subtle); color: var(--io-accent); padding: 6px 10px; border-right: 1px solid var(--io-border); letter-spacing: 0.1em; text-transform: uppercase; font-size: 12px; flex-shrink: 0; display: inline-flex; align-items: center; }
+.file-input:hover .file-btn { background: var(--io-accent); color: var(--io-on-accent); }
+.file-input .file-name { flex: 1; min-width: 0; padding: 6px 10px; color: var(--io-text-tertiary); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-flex; align-items: center; }
+.file-input.has-file .file-name { color: var(--io-text-primary); }
+
 .size-row { display: grid; grid-template-columns: 80px 1fr 50px; gap: 8px; align-items: center; padding: 5px 0; }
 .size-row .lbl { color: var(--io-text-secondary); font-size: 14px; letter-spacing: 0.06em; text-transform: lowercase; }
 .size-row .val { color: var(--io-accent); font-size: 14px; text-align: right; }
@@ -1106,6 +1557,7 @@ code,
     <button class="tab active" data-tab="CREATOR">Creator</button>
     <button class="tab" data-tab="THEMES">Themes</button>
     <button class="tab" data-tab="FONT">Font</button>
+    <button class="tab" data-tab="CANVAS">Canvas</button>
   </div>
 
   <div class="tab-pane active" data-pane="CREATOR">
@@ -1176,6 +1628,64 @@ code,
     <div class="section">
       <div class="section-h">Line Height<span class="right"><b>7</b> tiers</span></div>
       <div class="section-body" id="leadingRows"></div>
+    </div>
+  </div>
+
+  <div class="tab-pane" data-pane="CANVAS">
+    <div class="section">
+      <div class="section-h">Layout<span class="right"><b>3</b> sliders</span></div>
+      <div class="section-body" id="layoutRows"></div>
+    </div>
+    <div class="section">
+      <div class="section-h">Content Texture<span class="right"><b>webp</b> local</span></div>
+      <div class="section-body">
+        <div class="font-row">
+          <label class="file-input">
+            <input type="file" id="wallpaperInput" accept="image/webp,image/png,image/jpeg,image/gif">
+            <span class="file-btn">CHOOSE IMAGE</span>
+            <span class="file-name" id="wallpaperName">no file</span>
+          </label>
+          <button class="btn" id="clearWallpaperBtn">CLEAR</button>
+        </div>
+        <label class="live-toggle" id="wallpaperToggle"><input type="checkbox" id="wallpaperCheck"> ENABLE</label>
+        <div class="size-row" id="wallpaperOpacityRow">
+          <span class="lbl">opacity</span>
+          <input type="range" class="slider" id="wallpaperOpacity" min="0" max="80" step="1" value="18">
+          <span class="val" id="wallpaperOpacityVal">18%</span>
+        </div>
+        <div class="font-row">
+          <select class="font-input" id="wallpaperBlend">
+            <option value="normal">normal</option>
+            <option value="multiply">multiply</option>
+            <option value="screen">screen</option>
+            <option value="overlay">overlay</option>
+            <option value="soft-light">soft-light</option>
+            <option value="hard-light">hard-light</option>
+            <option value="luminosity">luminosity</option>
+          </select>
+        </div>
+        <div class="applied-tag" id="wallpaperTag">texture: none</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-h">Sidebar Texture<span class="right"><b>peek</b> mask</span></div>
+      <div class="section-body">
+        <div class="font-row">
+          <label class="file-input">
+            <input type="file" id="sidebarWallpaperInput" accept="image/webp,image/png,image/jpeg,image/gif">
+            <span class="file-btn">CHOOSE IMAGE</span>
+            <span class="file-name" id="sidebarWallpaperName">no file</span>
+          </label>
+          <button class="btn" id="clearSidebarWallpaperBtn">CLEAR</button>
+        </div>
+        <label class="live-toggle" id="sidebarWallpaperToggle"><input type="checkbox" id="sidebarWallpaperCheck"> ENABLE</label>
+        <div class="size-row">
+          <span class="lbl">opacity</span>
+          <input type="range" class="slider" id="sidebarWallpaperOpacity" min="0" max="80" step="1" value="18">
+          <span class="val" id="sidebarWallpaperOpacityVal">18%</span>
+        </div>
+        <div class="applied-tag" id="sidebarWallpaperTag">sidebar: none</div>
+      </div>
     </div>
   </div>
 
@@ -1415,7 +1925,15 @@ code,
   function renderSizeRows() {
     const order = ["caption", "footnote", "code", "body", "heading", "prompt", "title"];
     const ranges = { caption:[8,16], footnote:[9,18], code:[9,18], body:[10,20], heading:[11,22], prompt:[12,28], title:[14,40] };
-    $("sizeRows").innerHTML = order.map(k => {
+    // Master scale row first. Drives :root font-size; our overridden tokens
+    // are emitted in rem so this scales them all together. Range 12-24 covers
+    // ~75% to 150% of standard 16. Per-tier rows below stay relative.
+    const rootRow = `<div class="size-row" data-size="root">
+      <span class="lbl">root</span>
+      <input type="range" class="slider" min="12" max="24" step="1" value="${STATE.rootSize}">
+      <span class="val">${STATE.rootSize}px</span>
+    </div>`;
+    $("sizeRows").innerHTML = rootRow + order.map(k => {
       const [min, max] = ranges[k];
       return `<div class="size-row" data-size="${k}">
         <span class="lbl">${k}</span>
@@ -1423,13 +1941,18 @@ code,
         <span class="val">${STATE.sizes[k]}px</span>
       </div>`;
     }).join("");
-    root.querySelectorAll(".size-row").forEach(row => {
+    $("sizeRows").querySelectorAll(".size-row").forEach(row => {
       const k = row.dataset.size;
       const slider = row.querySelector("input");
       const val = row.querySelector(".val");
       slider.addEventListener("input", () => {
-        STATE.sizes[k] = parseInt(slider.value, 10);
-        val.textContent = STATE.sizes[k] + "px";
+        const v = parseInt(slider.value, 10);
+        if (k === "root") {
+          STATE.rootSize = v;
+        } else {
+          STATE.sizes[k] = v;
+        }
+        val.textContent = v + "px";
         renderStats();
         persistLast();
         if (STATE.live) applyLive();
@@ -1461,13 +1984,70 @@ code,
       });
     });
   }
+  function renderLayoutRows() {
+    const rows = [
+      { key: "mainWidth", label: "main width", min: 30, max: 100 },
+      { key: "mainMarginLeft", label: "main margin", min: 0, max: 70 },
+      { key: "chatWidth", label: "message/input width", min: 30, max: 100 }
+    ];
+    $("layoutRows").innerHTML = rows.map(row => {
+      const v = STATE.layout[row.key];
+      return `<div class="size-row" data-layout="${row.key}">
+        <span class="lbl">${row.label}</span>
+        <input type="range" class="slider" min="${row.min}" max="${row.max}" step="1" value="${v}">
+        <span class="val">${v}%</span>
+      </div>`;
+    }).join("");
+    root.querySelectorAll("[data-layout]").forEach(row => {
+      const key = row.dataset.layout;
+      const slider = row.querySelector("input");
+      const val = row.querySelector(".val");
+      slider.addEventListener("input", () => {
+        STATE.layout[key] = parseInt(slider.value, 10);
+        val.textContent = STATE.layout[key] + "%";
+        renderStats();
+        persistLast();
+        if (STATE.live) applyLive();
+      });
+    });
+  }
+  function renderWallpaperControls() {
+    $("wallpaperCheck").checked = !!STATE.wallpaper.enabled;
+    $("wallpaperToggle").classList.toggle("on", !!STATE.wallpaper.enabled);
+    $("wallpaperOpacity").value = STATE.wallpaper.opacity;
+    $("wallpaperOpacityVal").textContent = STATE.wallpaper.opacity + "%";
+    $("wallpaperBlend").value = STATE.wallpaper.blend || "normal";
+    $("wallpaperTag").textContent = STATE.wallpaper.image ? "texture: loaded" : "texture: none";
+    // File-input label sync. Browsers don't restore the picker filename across
+    // mounts; if there's a persisted image we just say "(saved texture)" so the
+    // styled button doesn't claim "no file" while a wallpaper is clearly active.
+    const wpName = $("wallpaperName");
+    if (wpName) {
+      if (!wpName.textContent || wpName.textContent === "no file") {
+        wpName.textContent = STATE.wallpaper.image ? "(saved texture)" : "no file";
+      }
+      wpName.parentElement.classList.toggle("has-file", !!STATE.wallpaper.image);
+    }
+    $("sidebarWallpaperCheck").checked = !!STATE.sidebarWallpaper.enabled;
+    $("sidebarWallpaperToggle").classList.toggle("on", !!STATE.sidebarWallpaper.enabled);
+    $("sidebarWallpaperOpacity").value = STATE.sidebarWallpaper.opacity;
+    $("sidebarWallpaperOpacityVal").textContent = STATE.sidebarWallpaper.opacity + "%";
+    $("sidebarWallpaperTag").textContent = STATE.sidebarWallpaper.image ? "sidebar: loaded" : "sidebar: none";
+    const swName = $("sidebarWallpaperName");
+    if (swName) {
+      if (!swName.textContent || swName.textContent === "no file") {
+        swName.textContent = STATE.sidebarWallpaper.image ? "(saved texture)" : "no file";
+      }
+      swName.parentElement.classList.toggle("has-file", !!STATE.sidebarWallpaper.image);
+    }
+  }
   // Repaint the creator panel itself from current STATE so it matches
   // whatever theme is active. Sets --io-* vars directly on .panel.
   function renderPanelTheme() {
     const p = $("panel");
     const bgRamp = deriveBg(STATE.bg);
-    const txRamp = deriveText(STATE.text, STATE.accent);
-    const bdRamp = deriveBorders(STATE.text);
+    const txRamp = deriveText(STATE.text, STATE.accent, STATE.bg);
+    const bdRamp = deriveBorders(STATE.text, STATE.bg);
     const bgHex = (i) => hslHex(bgRamp[i].h, bgRamp[i].s, bgRamp[i].l);
     const txHex = (i) => hslHex(txRamp[i].h, txRamp[i].s, txRamp[i].l);
     const bdHex = (i) => hslHex(bdRamp[i].h, bdRamp[i].s, bdRamp[i].l);
@@ -1507,6 +2087,8 @@ code,
     renderCodeChips();
     renderQuickPicks();
     renderThemes();
+    renderLayoutRows();
+    renderWallpaperControls();
     renderPanelTheme();
     renderStats();
     renderFontTag();
@@ -1522,13 +2104,26 @@ code,
     STATE.text = t.text;
     STATE.codePreset = t.code;
     if (t.font) { STATE.font = t.font; STATE.fontPending = t.font; $("fontInput").value = t.font; }
+    if (typeof t.rootSize === "number" && isFinite(t.rootSize) && t.rootSize > 0) STATE.rootSize = t.rootSize;
     if (t.sizes) {
       STATE.sizes = { ...DEFAULT_SIZES, ...t.sizes };
-      renderSizeRows();
     }
+    if (t.sizes || typeof t.rootSize === "number") renderSizeRows();
     if (t.leading) {
       STATE.leading = { ...DEFAULT_LEADING, ...t.leading };
       renderLeadingRows();
+    }
+    if (t.layout) {
+      STATE.layout = { ...DEFAULT_LAYOUT, ...t.layout };
+      renderLayoutRows();
+    }
+    if (t.wallpaper) {
+      STATE.wallpaper = { ...DEFAULT_WALLPAPER, ...t.wallpaper };
+      renderWallpaperControls();
+    }
+    if (t.sidebarWallpaper) {
+      STATE.sidebarWallpaper = { ...DEFAULT_SIDEBAR_WALLPAPER, ...t.sidebarWallpaper };
+      renderWallpaperControls();
     }
     $("nameInput").value = t.name;
     render();
@@ -1576,7 +2171,99 @@ code,
   $("applyFontBtn").addEventListener("click", applyFont);
   $("fontInput").addEventListener("keydown", (e) => { if (e.key === "Enter") applyFont(); });
 
+  $("wallpaperCheck").addEventListener("change", (e) => {
+    STATE.wallpaper.enabled = e.target.checked;
+    $("wallpaperToggle").classList.toggle("on", STATE.wallpaper.enabled);
+    persistLast();
+    if (STATE.live) applyLive();
+  });
+  $("wallpaperOpacity").addEventListener("input", (e) => {
+    STATE.wallpaper.opacity = parseInt(e.target.value, 10);
+    $("wallpaperOpacityVal").textContent = STATE.wallpaper.opacity + "%";
+    renderStats();
+    persistLast();
+    if (STATE.live) applyLive();
+  });
+  $("wallpaperBlend").addEventListener("change", (e) => {
+    STATE.wallpaper.blend = e.target.value;
+    renderStats();
+    persistLast();
+    if (STATE.live) applyLive();
+  });
+  $("wallpaperInput").addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      STATE.wallpaper.image = String(reader.result || "");
+      STATE.wallpaper.enabled = true;
+      const nm = $("wallpaperName");
+      if (nm) { nm.textContent = file.name; nm.parentElement.classList.add("has-file"); }
+      renderWallpaperControls();
+      renderStats();
+      persistLast();
+      if (STATE.live) applyLive();
+      toast("texture loaded");
+    };
+    reader.onerror = () => toast("background load failed");
+    reader.readAsDataURL(file);
+  });
+  $("clearWallpaperBtn").addEventListener("click", () => {
+    STATE.wallpaper = { ...DEFAULT_WALLPAPER };
+    $("wallpaperInput").value = "";
+    const nm = $("wallpaperName");
+    if (nm) { nm.textContent = "no file"; nm.parentElement.classList.remove("has-file"); }
+    renderWallpaperControls();
+    renderStats();
+    persistLast();
+    if (STATE.live) applyLive();
+    toast("texture cleared");
+  });
+  $("sidebarWallpaperCheck").addEventListener("change", (e) => {
+    STATE.sidebarWallpaper.enabled = e.target.checked;
+    $("sidebarWallpaperToggle").classList.toggle("on", STATE.sidebarWallpaper.enabled);
+    persistLast();
+    if (STATE.live) applyLive();
+  });
+  $("sidebarWallpaperOpacity").addEventListener("input", (e) => {
+    STATE.sidebarWallpaper.opacity = parseInt(e.target.value, 10);
+    $("sidebarWallpaperOpacityVal").textContent = STATE.sidebarWallpaper.opacity + "%";
+    renderStats();
+    persistLast();
+    if (STATE.live) applyLive();
+  });
+  $("sidebarWallpaperInput").addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      STATE.sidebarWallpaper.image = String(reader.result || "");
+      STATE.sidebarWallpaper.enabled = true;
+      const nm = $("sidebarWallpaperName");
+      if (nm) { nm.textContent = file.name; nm.parentElement.classList.add("has-file"); }
+      renderWallpaperControls();
+      renderStats();
+      persistLast();
+      if (STATE.live) applyLive();
+      toast("sidebar texture loaded");
+    };
+    reader.onerror = () => toast("sidebar texture failed");
+    reader.readAsDataURL(file);
+  });
+  $("clearSidebarWallpaperBtn").addEventListener("click", () => {
+    STATE.sidebarWallpaper = { ...DEFAULT_SIDEBAR_WALLPAPER };
+    $("sidebarWallpaperInput").value = "";
+    const nm = $("sidebarWallpaperName");
+    if (nm) { nm.textContent = "no file"; nm.parentElement.classList.remove("has-file"); }
+    renderWallpaperControls();
+    renderStats();
+    persistLast();
+    if (STATE.live) applyLive();
+    toast("sidebar texture cleared");
+  });
+
   $("resetSizesBtn").addEventListener("click", () => {
+    STATE.rootSize = DEFAULT_ROOT_SIZE;
     STATE.sizes = { ...DEFAULT_SIZES };
     STATE.leading = { ...DEFAULT_LEADING };
     renderSizeRows();
@@ -1635,8 +2322,12 @@ code,
       text: STATE.text,
       code: STATE.codePreset,
       font: STATE.font,
+      rootSize: STATE.rootSize,
       sizes: { ...STATE.sizes },
-      leading: { ...STATE.leading }
+      leading: { ...STATE.leading },
+      layout: { ...STATE.layout },
+      wallpaper: { ...STATE.wallpaper },
+      sidebarWallpaper: { ...STATE.sidebarWallpaper }
     };
     const idx = list.findIndex(t => t.name === current.name);
     if (idx >= 0) { list[idx] = current; toast("updated: " + current.name); }
@@ -1653,14 +2344,22 @@ code,
     STATE.bg = lain.bg;
     STATE.text = lain.text;
     STATE.codePreset = lain.code;
+    STATE.rootSize = DEFAULT_ROOT_SIZE;
     STATE.sizes = { ...DEFAULT_SIZES };
     STATE.leading = { ...DEFAULT_LEADING };
+    STATE.layout = { ...DEFAULT_LAYOUT };
+    STATE.wallpaper = { ...DEFAULT_WALLPAPER };
+    STATE.sidebarWallpaper = { ...DEFAULT_SIDEBAR_WALLPAPER };
     STATE.font = "";
     STATE.fontPending = "";
     $("nameInput").value = lain.name;
     $("fontInput").value = "";
+    $("wallpaperInput").value = "";
+    $("sidebarWallpaperInput").value = "";
     renderSizeRows();
     renderLeadingRows();
+    renderLayoutRows();
+    renderWallpaperControls();
     render();
     toast("restored defaults");
   });
@@ -1748,10 +2447,12 @@ code,
   }
   renderSizeRows();
   renderLeadingRows();
+  renderLayoutRows();
+  renderWallpaperControls();
   render();
   if (restored) toast("restored last session");
 
-  console.log("io-claude-creator panel injected. tabs: creator/themes/font. drag header.");
+  console.log("io-claude-creator panel injected. tabs: creator/themes/font/canvas. drag header.");
 
   // ============================================================
   // SEGMENTED-PILL INJECTION (panel re-opener)
